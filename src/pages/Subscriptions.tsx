@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Loader2 } from "lucide-react";
+import { Check, Star, Loader2, ArrowLeft } from "lucide-react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
@@ -58,6 +59,7 @@ export default function Subscriptions() {
   const { subscribed, subscriptionTier, createCheckout, openCustomerPortal, checkSubscription } = useSubscription();
   const { toast } = useToast();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleSubscribe = async (planId: string) => {
     if (!user) {
@@ -99,14 +101,28 @@ export default function Subscriptions() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="relative bg-gradient-to-b from-primary/20 to-background py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
-            Elige tu plan perfecto
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Disfruta de contenido ilimitado en todos tus dispositivos. 
-            Cancela cuando quieras, sin compromiso.
-          </p>
+        <div className="container mx-auto px-4">
+          {/* Botón de regresar */}
+          <div className="mb-8">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Regresar
+            </Button>
+          </div>
+          
+          <div className="text-center">
+            <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
+              Elige tu plan perfecto
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Disfruta de contenido ilimitado en todos tus dispositivos. 
+              Cancela cuando quieras, sin compromiso.
+            </p>
+          </div>
         </div>
       </div>
 
