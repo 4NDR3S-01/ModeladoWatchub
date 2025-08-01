@@ -77,3 +77,54 @@ verify_jwt = true
 
 [functions.verify-paypal-payment]
 verify_jwt = true
+
+[functions.paypal-cancel-subscription]
+verify_jwt = true
+
+[functions.paypal-check-subscription]
+verify_jwt = true
+
+[functions.paypal-create-subscription]
+verify_jwt = true
+
+[functions.admin-manage-content]
+verify_jwt = true
+
+[functions.admin-upload-content]
+verify_jwt = true
+
+[functions.admin-user-management]
+verify_jwt = true
+
+[functions.content-search]
+verify_jwt = true
+
+[functions.continue-watching]
+verify_jwt = true
+
+[functions.reviews-management]
+verify_jwt = true
+
+[functions.user-profile-management]
+verify_jwt = true
+
+[functions.video-access-control]
+verify_jwt = true
+
+[functions.watchlist-management]
+verify_jwt = true
+
+[functions.admin-approve-content]
+verify_jwt = true
+
+[functions.generate-recommendations]
+verify_jwt = true
+
+[functions.process-video-upload]
+verify_jwt = true
+
+[functions.upload-content]
+verify_jwt = true
+
+[functions.verify-payment]
+verify_jwt = true

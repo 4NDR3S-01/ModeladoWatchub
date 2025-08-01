@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Loader2, ArrowLeft } from "lucide-react";
+import { Check, Star, Loader2, CreditCard } from "lucide-react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { usePayPal } from "@/hooks/usePayPal";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const plans = [
   {
@@ -57,9 +58,10 @@ const plans = [
 export default function Subscriptions() {
   const { user } = useAuth();
   const { subscribed, subscriptionTier, createCheckout, openCustomerPortal, checkSubscription } = useSubscription();
+  const { createPayPalSubscription, loading: paypalLoading } = usePayPal();
   const { toast } = useToast();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
 
   const handleSubscribe = async (planId: string) => {
     if (!user) {
@@ -73,7 +75,14 @@ export default function Subscriptions() {
 
     setLoadingPlan(planId);
     try {
-      const checkoutUrl = await createCheckout(planId);
+      let checkoutUrl: string;
+      
+      if (paymentMethod === 'stripe') {
+        checkoutUrl = await createCheckout(planId);
+      } else {
+        checkoutUrl = await createPayPalSubscription(planId.toLowerCase());
+      }
+      
       window.open(checkoutUrl, '_blank');
     } catch (error) {
       toast({
@@ -101,33 +110,36 @@ export default function Subscriptions() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="relative bg-gradient-to-b from-primary/20 to-background py-20">
-        <div className="container mx-auto px-4">
-          {/* Botón de regresar */}
-          <div className="mb-8">
-            <Button
-              variant="ghost"
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Regresar
-            </Button>
-          </div>
-          
-          <div className="text-center">
-            <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
-              Elige tu plan perfecto
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Disfruta de contenido ilimitado en todos tus dispositivos. 
-              Cancela cuando quieras, sin compromiso.
-            </p>
-          </div>
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
+            Elige tu plan perfecto
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Disfruta de contenido ilimitado en todos tus dispositivos. 
+            Cancela cuando quieras, sin compromiso.
+          </p>
+        </div>
+      </div>
+
+      {/* Payment Method Selection */}
+      <div className="container mx-auto px-4 pb-8">
+        <div className="max-w-2xl mx-auto">
+          <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'stripe' | 'paypal')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="stripe" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Tarjeta de Crédito
+              </TabsTrigger>
+              <TabsTrigger value="paypal" className="flex items-center gap-2">
+                PayPal
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
       {/* Plans */}
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <Card 
@@ -184,9 +196,9 @@ export default function Subscriptions() {
                     className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : 'bg-secondary hover:bg-secondary/90'}`}
                     size="lg"
                     onClick={() => handleSubscribe(plan.id)}
-                    disabled={loadingPlan === plan.id}
+                    disabled={loadingPlan === plan.id || paypalLoading}
                   >
-                    {loadingPlan === plan.id ? (
+                    {(loadingPlan === plan.id || paypalLoading) ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Procesando...

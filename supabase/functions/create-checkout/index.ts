@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const logStep = (step: string, details?: any) => {
@@ -17,53 +17,52 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  );
+
   try {
     logStep("Function started");
+    
+    const { plan } = await req.json();
+    if (!plan) throw new Error("Plan is required");
+    logStep("Plan received", { plan });
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader!.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-
-    const user = userData.user;
+    const authHeader = req.headers.get("Authorization")!;
+    const token = authHeader.replace("Bearer ", "");
+    const { data } = await supabaseClient.auth.getUser(token);
+    const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { plan } = await req.json();
-    if (!["basic", "standard", "premium"].includes(plan)) {
-      throw new Error("Invalid subscription plan");
-    }
-
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16"
-    });
-
-    // Check if customer exists
-    const customers = await stripe.customers.list({
-      email: user.email,
-      limit: 1
-    });
-
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2023-10-16" });
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
       logStep("Existing customer found", { customerId });
+    } else {
+      logStep("Creating new customer");
     }
 
-    // Define plan pricing
-    const planPricing = {
-      basic: { amount: 999, name: "Plan Básico" },
-      standard: { amount: 1499, name: "Plan Estándar" },
-      premium: { amount: 1999, name: "Plan Premium" }
-    };
+    // Define pricing based on plan
+    let unitAmount;
+    switch (plan) {
+      case "Basic":
+        unitAmount = 799; // $7.99
+        break;
+      case "Standard":
+        unitAmount = 1299; // $12.99
+        break;
+      case "Premium":
+        unitAmount = 1899; // $18.99
+        break;
+      default:
+        throw new Error("Invalid plan");
+    }
 
-    const selectedPlan = planPricing[plan as keyof typeof planPricing];
+    logStep("Creating checkout session", { plan, unitAmount });
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -72,39 +71,30 @@ serve(async (req) => {
         {
           price_data: {
             currency: "usd",
-            product_data: {
-              name: `WatchHub ${selectedPlan.name}`,
-              description: `Suscripción mensual a ${selectedPlan.name}`
-            },
-            unit_amount: selectedPlan.amount,
-            recurring: { interval: "month" }
+            product_data: { name: `WatchHub ${plan} Subscription` },
+            unit_amount: unitAmount,
+            recurring: { interval: "month" },
           },
-          quantity: 1
-        }
+          quantity: 1,
+        },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/subscription-success`,
-      cancel_url: `${req.headers.get("origin")}/pricing`,
-      metadata: {
-        user_id: user.id,
-        plan: plan
-      }
+      success_url: `${req.headers.get("origin")}/payment-success`,
+      cancel_url: `${req.headers.get("origin")}/subscriptions`,
     });
 
-    logStep("Stripe session created", { sessionId: session.id, url: session.url });
+    logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200
+      status: 200,
     });
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in create-checkout", { message: errorMessage });
-    
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500
+      status: 500,
     });
   }
 });

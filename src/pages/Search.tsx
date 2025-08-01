@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search as SearchIcon, Filter, X, Calendar, Star, Clock, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search as SearchIcon, Filter, X, Calendar, Star, Clock, TrendingUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { ContentCard } from "@/components/ui/content-card";
 import { MovieDetailModal } from "@/components/ui/movie-detail-modal";
 import { Navbar } from "@/components/layout/navbar";
+import { useSearch } from "@/hooks/useSearch";
 import movie1 from "@/assets/movie-1.jpg";
 import movie2 from "@/assets/movie-2.jpg";
 import movie3 from "@/assets/movie-3.jpg";
@@ -22,6 +23,7 @@ export default function Search() {
   const [selectedContent, setSelectedContent] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const { loading, results, searchContent, getRecommendations } = useSearch();
 
   const genres = [
     "Acción", "Drama", "Comedia", "Thriller", "Sci-Fi", 
