@@ -23,15 +23,93 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Navbar } from "@/components/layout/navbar";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useDeviceDetection } from "@/hooks/useDeviceDetection";
+import { use2FA } from "@/hooks/use2FA";
+import { useSubscriptions } from "@/hooks/useSubscriptions";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { useToast } from "@/hooks/use-toast";
+import { EditProfileDialog } from "@/components/ui/edit-profile-dialog";
+import TwoFactorDialog from "@/components/TwoFactorDialog";
+import PaymentMethodsDialog from "@/components/PaymentMethodsDialog";
+import SubscriptionDialog from "@/components/SubscriptionDialog";
 
 export default function Settings() {
+  const { user } = useAuth();
+  const { profile, loading: profileLoading, updateProfile } = useUserProfile();
+  const { currentDevice, connectedDevices, disconnectDevice } = useDeviceDetection();
+  const { twoFactor } = use2FA();
+  const { currentSubscription, subscriptionHistory } = useSubscriptions();
+  const { paymentMethods } = usePaymentMethods();
+  const { toast } = useToast();
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [is2FADialogOpen, setIs2FADialogOpen] = useState(false);
+  const [isPaymentMethodsDialogOpen, setIsPaymentMethodsDialogOpen] = useState(false);
+  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoplay, setAutoplay] = useState(true);
   const [subtitles, setSubtitles] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [childrenMode, setChildrenMode] = useState(false);
   const [dataUsage, setDataUsage] = useState([2]);
+
+  const handleUpdateProfile = async (displayName: string) => {
+    return await updateProfile({ display_name: displayName });
+  };
+
+  const handleDisconnectDevice = (sessionId: string, deviceName: string) => {
+    const success = disconnectDevice(sessionId);
+    if (!success) {
+      toast({
+        title: "No se puede desconectar",
+        description: "No puedes desconectar el dispositivo que estás usando actualmente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Dispositivo desconectado",
+      description: `Se ha desconectado "${deviceName}" exitosamente.`,
+    });
+  };
+
+  const getSubscriptionPlanDisplay = (plan: string) => {
+    switch (plan) {
+      case 'premium':
+        return 'Plan Premium';
+      case 'standard':
+        return 'Plan Estándar';
+      case 'basic':
+        return 'Plan Básico';
+      default:
+        return 'Plan Básico';
+    }
+  };
+
+  const getSubscriptionPrice = (plan: string) => {
+    switch (plan) {
+      case 'premium':
+        return '$19.99';
+      case 'standard':
+        return '$14.99';
+      case 'basic':
+        return '$9.99';
+      default:
+        return '$9.99';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   const settingsSections = [
     {
@@ -78,13 +156,6 @@ export default function Settings() {
     }
   ];
 
-  const connectedDevices = [
-    { name: "iPhone 14 Pro", type: "Móvil", lastActive: "Activo ahora", location: "Ciudad de México" },
-    { name: "Samsung Smart TV", type: "TV", lastActive: "Hace 2 horas", location: "Sala" },
-    { name: "MacBook Pro", type: "Computadora", lastActive: "Hace 1 día", location: "Ciudad de México" },
-    { name: "iPad Air", type: "Tablet", lastActive: "Hace 3 días", location: "Ciudad de México" }
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -127,36 +198,89 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="w-10 h-10 text-primary" />
+                {profileLoading ? (
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="w-20 h-20 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-4 w-64" />
+                      <Skeleton className="h-6 w-24" />
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">María García</h3>
-                    <p className="text-muted-foreground">maria.garcia@email.com</p>
-                    <Badge variant="secondary" className="mt-1">Plan Premium</Badge>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Avatar" 
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-10 h-10 text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">
+                        {profile?.display_name || user?.email?.split('@')[0] || 'Usuario'}
+                      </h3>
+                      <p className="text-muted-foreground">{user?.email || 'No disponible'}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {profile ? getSubscriptionPlanDisplay(profile.subscription_plan) : 'Plan Básico'}
+                      </Badge>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="ml-auto"
+                      onClick={() => setIsEditDialogOpen(true)}
+                    >
+                      Editar perfil
+                    </Button>
                   </div>
-                  <Button variant="outline" className="ml-auto">
-                    Editar perfil
-                  </Button>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label className="text-sm font-medium">Nombre completo</Label>
-                    <p className="text-sm text-muted-foreground mt-1">María García López</p>
+                    <Label className="text-sm font-medium">Nombre para mostrar</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {profileLoading ? (
+                        <Skeleton className="h-4 w-32" />
+                      ) : (
+                        profile?.display_name || user?.email?.split('@')[0] || 'No disponible'
+                      )}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Fecha de nacimiento</Label>
-                    <p className="text-sm text-muted-foreground mt-1">15 de marzo, 1992</p>
+                    <Label className="text-sm font-medium">Correo electrónico</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {user?.email || 'No disponible'}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Teléfono</Label>
-                    <p className="text-sm text-muted-foreground mt-1">+52 55 1234 5678</p>
+                    <Label className="text-sm font-medium">Fecha de registro</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {profileLoading ? (
+                        <Skeleton className="h-4 w-40" />
+                      ) : profile?.created_at ? (
+                        formatDate(profile.created_at)
+                      ) : user?.created_at ? (
+                        formatDate(user.created_at)
+                      ) : (
+                        'No disponible'
+                      )}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">País</Label>
-                    <p className="text-sm text-muted-foreground mt-1">México</p>
+                    <Label className="text-sm font-medium">Última actualización</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {profileLoading ? (
+                        <Skeleton className="h-4 w-40" />
+                      ) : profile?.updated_at ? (
+                        formatDate(profile.updated_at)
+                      ) : (
+                        'No disponible'
+                      )}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -259,8 +383,17 @@ export default function Settings() {
                     Cambiar contraseña
                     <ChevronRight className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" className="w-full justify-between">
-                    Autenticación de dos factores
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between"
+                    onClick={() => setIs2FADialogOpen(true)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>Autenticación de dos factores</span>
+                      <Badge variant={twoFactor.isEnabled ? "default" : "secondary"} className="text-xs">
+                        {twoFactor.isEnabled ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </div>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                   <Button variant="destructive" className="w-full">
@@ -368,32 +501,96 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Current Device Info */}
+                {currentDevice && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+                        {currentDevice.type === 'Móvil' && <Smartphone className="w-5 h-5 text-primary" />}
+                        {currentDevice.type === 'TV' && <Monitor className="w-5 h-5 text-primary" />}
+                        {currentDevice.type === 'Computadora' && <Monitor className="w-5 h-5 text-primary" />}
+                        {currentDevice.type === 'Tablet' && <Smartphone className="w-5 h-5 text-primary" />}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-foreground flex items-center gap-2">
+                          {currentDevice.name}
+                          <Badge variant="default" className="text-xs">Este dispositivo</Badge>
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {currentDevice.type} • {currentDevice.os} • {currentDevice.lastActive}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-foreground">Todos los dispositivos</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {connectedDevices.length} dispositivo{connectedDevices.length !== 1 ? 's' : ''} conectado{connectedDevices.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  
                   {connectedDevices.map((device, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                    <div key={device.sessionId || index} className="flex items-center justify-between p-4 border border-border rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                           {device.type === 'Móvil' && <Smartphone className="w-5 h-5 text-primary" />}
                           {device.type === 'TV' && <Monitor className="w-5 h-5 text-primary" />}
                           {device.type === 'Computadora' && <Monitor className="w-5 h-5 text-primary" />}
                           {device.type === 'Tablet' && <Smartphone className="w-5 h-5 text-primary" />}
+                          {device.type === 'Desconocido' && <HelpCircle className="w-5 h-5 text-primary" />}
                         </div>
                         <div>
-                          <h4 className="font-medium text-foreground">{device.name}</h4>
-                          <p className="text-sm text-muted-foreground">{device.type} • {device.location}</p>
-                          <p className="text-xs text-muted-foreground">{device.lastActive}</p>
+                          <h4 className="font-medium text-foreground flex items-center gap-2">
+                            {device.name}
+                            {device.isCurrent && (
+                              <Badge variant="secondary" className="text-xs">Actual</Badge>
+                            )}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {device.type} • {device.browser} • {device.lastActive}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Sistema: {device.os}
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         {device.lastActive === 'Activo ahora' && (
                           <Badge variant="secondary">Activo</Badge>
                         )}
-                        <Button variant="outline" size="sm">
-                          Desconectar
-                        </Button>
+                        {!device.isCurrent && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDisconnectDevice(device.sessionId, device.name)}
+                          >
+                            Desconectar
+                          </Button>
+                        )}
+                        {device.isCurrent && (
+                          <Button variant="ghost" size="sm" disabled>
+                            Dispositivo actual
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
+                </div>
+
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Smartphone className="w-5 h-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-foreground">Dispositivo actual detectado</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Estás usando {currentDevice?.name || 'un dispositivo desconocido'} con {currentDevice?.browser || 'navegador desconocido'} 
+                        en {currentDevice?.os || 'sistema desconocido'}.
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
@@ -402,7 +599,8 @@ export default function Settings() {
                     <div>
                       <h4 className="font-medium text-foreground">Límite de dispositivos</h4>
                       <p className="text-sm text-muted-foreground">
-                        Tu plan Premium permite hasta 4 dispositivos simultáneos. Actualmente tienes 4 dispositivos conectados.
+                        Tu plan {profile ? getSubscriptionPlanDisplay(profile.subscription_plan) : 'Básico'} permite hasta 4 dispositivos simultáneos. 
+                        Actualmente tienes {connectedDevices.length} dispositivo{connectedDevices.length !== 1 ? 's' : ''} conectado{connectedDevices.length !== 1 ? 's' : ''}.
                       </p>
                     </div>
                   </div>
@@ -497,86 +695,182 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Suscripción actual */}
                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-foreground">Plan Premium</h3>
-                      <p className="text-muted-foreground">$9 USD/mes</p>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {currentSubscription ? getSubscriptionPlanDisplay(currentSubscription.plan) : 'Sin suscripción'}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {currentSubscription ? `${getSubscriptionPrice(currentSubscription.plan)}/mes` : 'Suscríbete para disfrutar del contenido premium'}
+                      </p>
                     </div>
-                    <Badge variant="default">Activo</Badge>
+                    <Badge variant={currentSubscription?.status === 'active' ? 'default' : 'secondary'}>
+                      {currentSubscription?.status === 'active' ? 'Activo' : 
+                       currentSubscription?.status === 'cancelled' ? 'Cancelado' : 'Inactivo'}
+                    </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Próximo pago</p>
-                      <p className="font-medium">15 de febrero, 2024</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Calidad</p>
-                      <p className="font-medium">4K + HDR</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Dispositivos</p>
-                      <p className="font-medium">4 simultáneos</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      Cambiar plan
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      Cancelar suscripción
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium text-foreground">Método de pago</h4>
-                  <div className="flex items-center justify-between p-4 border border-border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-blue-600" />
+                  
+                  {currentSubscription && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {currentSubscription.status === 'cancelled' ? 'Expira' : 'Próximo pago'}
+                        </p>
+                        <p className="font-medium">
+                          {currentSubscription.end_date ? formatDate(currentSubscription.end_date) : 'No disponible'}
+                        </p>
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">**** **** **** 4532</p>
-                        <p className="text-sm text-muted-foreground">Visa • Expira 12/26</p>
+                        <p className="text-sm text-muted-foreground">Plan desde</p>
+                        <p className="font-medium">{formatDate(currentSubscription.start_date)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Estado</p>
+                        <p className="font-medium capitalize">{currentSubscription.status}</p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Editar
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsSubscriptionDialogOpen(true)}
+                    >
+                      {currentSubscription ? 'Gestionar suscripción' : 'Ver planes'}
                     </Button>
                   </div>
                 </div>
 
+                {/* Métodos de pago */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-foreground">Historial de pagos</h4>
-                  <div className="space-y-2">
-                    {[
-                      { date: "15 Ene 2024", amount: "$199.00", status: "Pagado" },
-                      { date: "15 Dic 2023", amount: "$199.00", status: "Pagado" },
-                      { date: "15 Nov 2023", amount: "$199.00", status: "Pagado" }
-                    ].map((payment, index) => (
-                      <div key={index} className="flex items-center justify-between py-2">
-                        <div>
-                          <p className="font-medium text-foreground">{payment.date}</p>
-                          <p className="text-sm text-muted-foreground">Plan Premium</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-foreground">{payment.amount}</p>
-                          <Badge variant="secondary" className="text-xs">
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-foreground">Métodos de pago</h4>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsPaymentMethodsDialogOpen(true)}
+                    >
+                      Gestionar tarjetas
+                    </Button>
                   </div>
-                  <Button variant="outline" className="w-full">
-                    Ver historial completo
-                  </Button>
+                  
+                  {paymentMethods.length > 0 ? (
+                    <div className="space-y-3">
+                      {paymentMethods.slice(0, 2).map((card) => (
+                        <div key={card.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <CreditCard className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">
+                                **** **** **** {card.card_last4}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {card.card_brand.charAt(0).toUpperCase() + card.card_brand.slice(1)} • Expira {card.exp_month.toString().padStart(2, '0')}/{card.exp_year}
+                              </p>
+                            </div>
+                          </div>
+                          {card.is_default && (
+                            <Badge variant="default" className="text-xs">
+                              Predeterminada
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                      {paymentMethods.length > 2 && (
+                        <p className="text-sm text-muted-foreground text-center">
+                          +{paymentMethods.length - 2} tarjetas más
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border border-dashed border-border rounded-lg">
+                      <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">No tienes métodos de pago guardados</p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => setIsPaymentMethodsDialogOpen(true)}
+                      >
+                        Agregar tarjeta
+                      </Button>
+                    </div>
+                  )}
                 </div>
+
+                {/* Historial de suscripciones */}
+                {subscriptionHistory.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-foreground">Historial de suscripciones</h4>
+                    <div className="space-y-2">
+                      {subscriptionHistory.slice(0, 3).map((subscription) => (
+                        <div key={subscription.id} className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {getSubscriptionPlanDisplay(subscription.plan)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(subscription.date)} - {subscription.action}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-foreground">{getSubscriptionPrice(subscription.plan)}/mes</p>
+                            <Badge 
+                              variant="secondary" 
+                              className="text-xs"
+                            >
+                              {subscription.action === 'subscribed' ? 'Suscrito' : 
+                               subscription.action === 'cancelled' ? 'Cancelado' : 
+                               subscription.action === 'renewed' ? 'Renovado' : 'Actualizado'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {subscriptionHistory.length > 3 && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setIsSubscriptionDialogOpen(true)}
+                      >
+                        Ver historial completo
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Profile Dialog */}
+        <EditProfileDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          currentDisplayName={profile?.display_name || user?.email?.split('@')[0] || ''}
+          onSave={handleUpdateProfile}
+        />
+
+        {/* Two Factor Authentication Dialog */}
+        <TwoFactorDialog
+          open={is2FADialogOpen}
+          onOpenChange={setIs2FADialogOpen}
+        />
+
+        {/* Payment Methods Dialog */}
+        <PaymentMethodsDialog
+          open={isPaymentMethodsDialogOpen}
+          onOpenChange={setIsPaymentMethodsDialogOpen}
+        />
+
+        {/* Subscription Dialog */}
+        <SubscriptionDialog
+          open={isSubscriptionDialogOpen}
+          onOpenChange={setIsSubscriptionDialogOpen}
+        />
       </div>
     </div>
   );
