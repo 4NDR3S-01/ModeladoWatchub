@@ -1,22 +1,56 @@
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Settings } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import React, { useRef, useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  Maximize, 
+  Settings,
+  SkipBack,
+  SkipForward,
+  Subtitles,
+  X
+} from 'lucide-react';
+import { StreamingSource } from '@/services/streamingService';
+import { cn } from '@/lib/utils';
 
 interface VideoPlayerProps {
+  source?: StreamingSource;
   title: string;
   episode?: string;
-  onClose: () => void;
+  onClose?: () => void;
+  onProgress?: (progress: number) => void;
+  startTime?: number;
 }
 
-export function VideoPlayer({ title, episode, onClose }: VideoPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [showControls, setShowControls] = useState(true);
-  const [currentTime, setCurrentTime] = useState("0:00");
-  const [duration, setDuration] = useState("45:32");
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  source,
+  title,
+  episode,
+  onClose,
+  onProgress,
+  startTime = 0
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedQuality, setSelectedQuality] = useState(source?.quality || 'HD');
+  const [showSubtitles, setShowSubtitles] = useState(false);
+
+  const controlsTimeout = useRef<NodeJS.Timeout>();
+
+  // Default video URL for demo
+  const videoUrl = source?.url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
   useEffect(() => {
     const timer = setTimeout(() => {

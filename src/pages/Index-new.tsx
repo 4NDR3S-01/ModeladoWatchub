@@ -8,92 +8,86 @@ import { Star, TrendingUp, Award } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOMDbMovies } from "@/hooks/useOMDbMovies";
+import { getPopularMovies, getTrendingMovies } from "@/services/omdbService";
+import type { OMDbMovie } from "@/services/omdbService";
 
 const Index = () => {
   const { user } = useAuth();
-  const { movies: omdbMovies, loading, getPopularMovies } = useOMDbMovies();
   const navigate = useNavigate();
   const [selectedContent, setSelectedContent] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [popularMovies, setPopularMovies] = useState<OMDbMovie[]>([]);
+  const [trendingMovies, setTrendingMovies] = useState<OMDbMovie[]>([]);
 
   useEffect(() => {
     if (!user) {
       navigate("/welcome");
-    } else {
-      // Load popular movies from OMDb
-      getPopularMovies();
+      return;
     }
-  }, [user, navigate]); // Removed getPopularMovies from dependencies
+    
+    loadOMDbData();
+  }, [user, navigate]);
+
+  const loadOMDbData = async () => {
+    try {
+      setLoading(true);
+      
+      const [popular, trending] = await Promise.all([
+        getPopularMovies(),
+        getTrendingMovies()
+      ]);
+      
+      setPopularMovies(popular);
+      setTrendingMovies(trending);
+    } catch (error) {
+      console.error('Error loading OMDb data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
   }
 
-  // Only show loading spinner if we're loading and don't have any movies yet
-  if (loading && omdbMovies.length === 0) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-32 flex items-center justify-center">
-          <LoadingSpinner />
-        </div>
-      </div>
-    );
-  }
-
-  // Convert OMDb movies to the format expected by the components
-  const popularMovies = omdbMovies.slice(0, 10).map(movie => ({
-    id: movie.imdb_id,
-    title: movie.title,
-    image: movie.poster_url,
-    genre: movie.genre?.join(', ') || 'N/A',
-    description: movie.description,
-    rating: movie.rating?.toString() || 'N/A',
-    year: movie.release_year?.toString() || 'N/A',
-    cast: movie.cast || [],
-    director: movie.director || 'N/A'
+  // Map OMDb movies to content format
+  const mapOMDbMoviesToContent = (movies: OMDbMovie[]) => movies.map((movie) => ({
+    id: movie.imdbID,
+    title: movie.Title,
+    image: movie.Poster !== 'N/A' ? movie.Poster : '/placeholder.svg',
+    genre: movie.Genre?.split(',')[0] || 'Drama',
+    description: movie.Plot !== 'N/A' ? movie.Plot : 'No description available',
+    rating: movie.imdbRating !== 'N/A' ? movie.imdbRating : '0',
+    year: movie.Year !== 'N/A' ? movie.Year : new Date().getFullYear().toString(),
+    cast: movie.Actors?.split(', ') || [],
+    director: movie.Director
   }));
 
   const topTenToday = popularMovies.slice(0, 10).map((movie, index) => ({
-    id: movie.id,
-    title: movie.title,
-    image: movie.image,
+    id: movie.imdbID,
+    title: movie.Title,
+    image: movie.Poster !== 'N/A' ? movie.Poster : "/placeholder.svg",
     rank: index + 1,
-    category: movie.genre
+    category: movie.Genre ? movie.Genre.split(', ')[0] : "Película"
   }));
 
-  // If no movies loaded yet and not loading, show a message
-  if (!loading && omdbMovies.length === 0) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-32 text-center">
-          <h2 className="text-2xl font-semibold mb-4">Cargando contenido...</h2>
-          <p className="text-muted-foreground">
-            Estamos preparando las mejores películas para ti.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   const handleContentClick = (content: any) => {
-    // Convert OMDb movie format to modal format if needed
-    const modalContent = {
-      id: content.imdb_id || content.id,
-      title: content.title,
-      image: content.poster_url || content.image,
-      rating: content.rating?.toString(),
-      duration: content.duration ? `${Math.floor(content.duration / 60)}h ${content.duration % 60}m` : content.duration,
-      category: content.genre?.join(', ') || content.category,
-      year: content.release_year?.toString() || content.year,
-      description: content.description,
-      cast: content.cast,
-      director: content.director
+    const detailContent = {
+      ...content,
+      description: content.description || "Una experiencia cinematográfica única que te mantendrá al borde de tu asiento.",
+      cast: content.cast || ["Actor Principal", "Actor Secundario", "Actor de Reparto"],
+      director: content.director || "Director Reconocido"
     };
-    
-    setSelectedContent(modalContent);
+    setSelectedContent(detailContent);
     setIsDetailModalOpen(true);
   };
 
@@ -102,26 +96,35 @@ const Index = () => {
       <Navbar />
       
       {/* Hero Section */}
-      <HeroSection 
-        movies={omdbMovies.slice(0, 5)} // Pass first 5 movies for rotation
-        onMovieClick={handleContentClick}
-      />
+      <HeroSection />
 
       {/* Content Sections */}
       <div className="space-y-8 pb-16">
         {/* Top 10 Today */}
         <TopTenRow 
-          title="Top 10"
+          title="Top 10 en México hoy"
           items={topTenToday}
         />
 
         {/* Popular Movies from OMDb */}
-        <ContentRow
-          title="Películas Populares"
-          subtitle="Las mejores películas según OMDb"
-          items={popularMovies}
-          onItemClick={handleContentClick}
-        />
+        {popularMovies.length > 0 && (
+          <ContentRow
+            title="Películas Populares"
+            subtitle="Las mejores películas según IMDb"
+            items={mapOMDbMoviesToContent(popularMovies)}
+            onItemClick={handleContentClick}
+          />
+        )}
+
+        {/* Trending Movies from OMDb */}
+        {trendingMovies.length > 0 && (
+          <ContentRow
+            title="Tendencias"
+            subtitle="Las películas más populares del momento"
+            items={mapOMDbMoviesToContent(trendingMovies)}
+            onItemClick={handleContentClick}
+          />
+        )}
 
         {/* Call to Action Section */}
         <section className="py-8 sm:py-12 lg:py-16">
@@ -142,7 +145,7 @@ const Index = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
                 <button 
-                  onClick={() => navigate("/categories")}
+                  onClick={() => navigate("/search")}
                   className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
                 >
                   <TrendingUp className="w-4 h-4" />

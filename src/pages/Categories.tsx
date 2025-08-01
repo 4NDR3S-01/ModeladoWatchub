@@ -6,35 +6,78 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMovies } from "@/hooks/useMovies";
+import { useOMDbMovies } from "@/hooks/useOMDbMovies";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, Grid, List } from "lucide-react";
+import { Search, Grid, List } from "lucide-react";
 
 const Categories = () => {
-  const { movies, loading } = useMovies();
+  const { movies: omdbMovies, loading: omdbLoading, getPopularMovies, searchMovies } = useOMDbMovies();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [sortBy, setSortBy] = useState("title");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [omdbSearchTerm, setOmdbSearchTerm] = useState("");
 
   useEffect(() => {
     if (!user) {
       navigate("/welcome");
+    } else {
+      // Load popular movies from OMDb when user is logged in
+      getPopularMovies();
     }
-  }, [user, navigate]);
+  }, [user, navigate, getPopularMovies]);
 
-  // Get unique genres from movies
+  // Use only OMDb movies instead of combining with local movies
+  const allMovies = omdbMovies.map(movie => ({
+    id: movie.imdb_id,
+    title: movie.title,
+    description: movie.description,
+    poster_url: movie.poster_url,
+    video_url: movie.video_url,
+    duration: movie.duration,
+    release_year: movie.release_year,
+    genre: movie.genre,
+    rating: movie.rating,
+    director: movie.director,
+    cast: movie.cast,
+    age_rating: movie.age_rating,
+    country: movie.country,
+    language: movie.language,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    imdb_id: movie.imdb_id,
+    is_featured: false,
+    is_trending: false
+  }));
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/welcome");
+    } else {
+      // Load popular movies from OMDb when user is logged in
+      getPopularMovies();
+    }
+  }, [user, navigate]); // Removed getPopularMovies from dependencies
+
+  // Handle OMDb search
+  const handleOMDbSearch = () => {
+    if (omdbSearchTerm.trim()) {
+      searchMovies(omdbSearchTerm);
+    }
+  };
+
+  // Get unique genres from all movies
   const genres = Array.from(
     new Set(
-      movies.flatMap(movie => movie.genre || [])
+      allMovies.flatMap(movie => movie.genre || [])
     )
   ).sort();
 
   // Filter and sort movies
-  const filteredMovies = movies
+  const filteredMovies = allMovies
     .filter(movie => {
       const matchesSearch = movie.title.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGenre = selectedGenre === "all" || movie.genre?.includes(selectedGenre);
@@ -57,7 +100,7 @@ const Categories = () => {
     return null;
   }
 
-  if (loading) {
+  if (omdbLoading && omdbMovies.length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -164,10 +207,33 @@ const Categories = () => {
           </div>
         </div>
 
+        {/* OMDb Search Section */}
+        <div className="mb-8 p-4 bg-card rounded-lg border">
+          <h3 className="text-lg font-semibold mb-3">Buscar más películas (OMDb)</h3>
+          <div className="flex gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Buscar en OMDb (ej: Inception, Batman)..."
+                value={omdbSearchTerm}
+                onChange={(e) => setOmdbSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleOMDbSearch()}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={handleOMDbSearch} disabled={!omdbSearchTerm.trim() || omdbLoading}>
+              {omdbLoading ? "Buscando..." : "Buscar"}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Busca películas adicionales en la base de datos de OMDb y las agregaremos a tu catálogo.
+          </p>
+        </div>
+
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-muted-foreground">
-            Mostrando {filteredMovies.length} de {movies.length} películas
+            Mostrando {filteredMovies.length} de {allMovies.length} películas
           </p>
         </div>
 

@@ -24,60 +24,79 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
+import { useAdminMetrics } from "@/hooks/useAdminMetrics";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
+  const { metrics, contentMetrics, topMovies, recentActivities, loading, error } = useAdminMetrics();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <LoadingSpinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return null;
+  }
 
   const stats = [
     {
-      title: "Usuarios Activos",
-      value: "24,891",
-      change: "+12.5%",
+      title: "Usuarios Totales",
+      value: metrics.totalUsers.toLocaleString(),
+      change: `+${metrics.newUsers}`,
       trend: "up",
       icon: Users,
       color: "text-blue-500"
     },
     {
-      title: "Ingresos del Mes",
-      value: "$127,450",
-      change: "+8.2%",
+      title: "Usuarios Activos",
+      value: metrics.activeUsers.toLocaleString(),
+      change: "+12.5%",
       trend: "up",
-      icon: DollarSign,
+      icon: Activity,
       color: "text-green-500"
     },
     {
-      title: "Películas Vistas",
-      value: "156,203",
-      change: "+15.1%",
+      title: "Total Contenido",
+      value: metrics.totalContent.toLocaleString(),
+      change: `${metrics.publishedContent} publicado`,
       trend: "up",
-      icon: Eye,
+      icon: Film,
       color: "text-purple-500"
     },
     {
-      title: "Nuevas Suscripciones",
-      value: "892",
-      change: "+6.3%",
+      title: "Contenido Publicado",
+      value: metrics.publishedContent.toLocaleString(),
+      change: `${metrics.draftContent} borradores`,
       trend: "up",
-      icon: TrendingUp,
+      icon: Eye,
       color: "text-orange-500"
     }
   ];
 
-  const recentActivities = [
-    { type: "user", message: "Nuevo usuario registrado: María González", time: "Hace 2 min" },
-    { type: "content", message: "Película 'El Último Guardián' agregada al catálogo", time: "Hace 15 min" },
-    { type: "payment", message: "Pago recibido: Plan Premium ($9.99)", time: "Hace 23 min" },
-    { type: "system", message: "Backup automático completado", time: "Hace 1 hora" },
-    { type: "user", message: "Usuario premium canceló suscripción", time: "Hace 2 horas" }
-  ];
-
-  const topMovies = [
-    { title: "El Último Guardián", views: 45280, rating: 4.8, image: "/src/assets/movie-1.jpg" },
-    { title: "Neo Tokyo 2099", views: 38950, rating: 4.7, image: "/src/assets/movie-3.jpg" },
-    { title: "Corazones en París", views: 32100, rating: 4.6, image: "/src/assets/movie-2.jpg" },
-    { title: "La Conspiración", views: 28750, rating: 4.5, image: "/src/assets/movie-1.jpg" },
-    { title: "Memorias Perdidas", views: 25300, rating: 4.4, image: "/src/assets/movie-2.jpg" }
-  ];
+  // These variables are already loaded from the hook
+  // const recentActivities and const topMovies are removed
 
   return (
     <div className="min-h-screen bg-background">
@@ -211,7 +230,7 @@ export default function AdminDashboard() {
                         {index + 1}
                       </div>
                       <img 
-                        src={movie.image} 
+                        src={movie.poster_url || "/placeholder.svg"} 
                         alt={movie.title}
                         className="w-12 h-16 object-cover rounded"
                       />
@@ -220,11 +239,11 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center">
                             <Eye className="w-3 h-3 mr-1" />
-                            {movie.views.toLocaleString()} vistas
+                            {(movie.views || 0).toLocaleString()} vistas
                           </span>
                           <span className="flex items-center">
                             <Star className="w-3 h-3 mr-1 text-yellow-500" />
-                            {movie.rating}
+                            {movie.rating || 0}
                           </span>
                         </div>
                       </div>

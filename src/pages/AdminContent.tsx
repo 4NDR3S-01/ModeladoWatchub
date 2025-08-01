@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Film, 
   Plus, 
@@ -23,102 +23,92 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
+import { useMovies } from "@/hooks/useMovies";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function AdminContent() {
+  const { movies, loading, error } = useMovies();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
 
-  const movies = [
-    {
-      id: 1,
-      title: "El Último Guardián",
-      category: "Acción",
-      status: "Publicado",
-      views: 45280,
-      rating: 4.8,
-      duration: "2h 15m",
-      uploadDate: "2024-01-15",
-      image: "/src/assets/movie-1.jpg",
-      size: "2.1 GB"
-    },
-    {
-      id: 2,
-      title: "Neo Tokyo 2099",
-      category: "Sci-Fi",
-      status: "Publicado",
-      views: 38950,
-      rating: 4.7,
-      duration: "2h 32m",
-      uploadDate: "2024-01-12",
-      image: "/src/assets/movie-3.jpg",
-      size: "2.8 GB"
-    },
-    {
-      id: 3,
-      title: "Corazones en París",
-      category: "Romance",
-      status: "Borrador",
-      views: 0,
-      rating: 0,
-      duration: "1h 58m",
-      uploadDate: "2024-01-20",
-      image: "/src/assets/movie-2.jpg",
-      size: "1.9 GB"
-    },
-    {
-      id: 4,
-      title: "La Conspiración",
-      category: "Thriller",
-      status: "Publicado",
-      views: 28750,
-      rating: 4.5,
-      duration: "2h 08m",
-      uploadDate: "2024-01-10",
-      image: "/src/assets/movie-1.jpg",
-      size: "2.3 GB"
-    },
-    {
-      id: 5,
-      title: "Memorias Perdidas",
-      category: "Drama",
-      status: "En Revisión",
-      views: 0,
-      rating: 0,
-      duration: "1h 45m",
-      uploadDate: "2024-01-18",
-      image: "/src/assets/movie-2.jpg",
-      size: "1.7 GB"
-    }
-  ];
+  // Filter movies based on search and filters
+  const filteredMovies = movies.filter(movie => {
+    const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || movie.genre?.includes(selectedCategory);
+    const matchesStatus = selectedStatus === "all" || movie.status === selectedStatus;
+    
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  // Calculate statistics from real data
+  const totalMovies = movies.length;
+  const publishedMovies = movies.filter(movie => movie.status === 'published').length;
+  const draftMovies = movies.filter(movie => movie.status === 'draft').length;
+  const pendingMovies = movies.filter(movie => movie.status === 'pending_review').length;
 
   const categories = [
     { value: "all", label: "Todas las categorías" },
-    { value: "accion", label: "Acción" },
-    { value: "drama", label: "Drama" },
-    { value: "comedia", label: "Comedia" },
-    { value: "thriller", label: "Thriller" },
-    { value: "sci-fi", label: "Sci-Fi" },
-    { value: "romance", label: "Romance" }
+    { value: "Acción", label: "Acción" },
+    { value: "Drama", label: "Drama" },
+    { value: "Comedia", label: "Comedia" },
+    { value: "Thriller", label: "Thriller" },
+    { value: "Ciencia Ficción", label: "Ciencia Ficción" },
+    { value: "Romance", label: "Romance" }
   ];
 
   const statusOptions = [
     { value: "all", label: "Todos los estados" },
     { value: "published", label: "Publicado" },
     { value: "draft", label: "Borrador" },
-    { value: "review", label: "En Revisión" },
+    { value: "pending_review", label: "En Revisión" },
     { value: "archived", label: "Archivado" }
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Publicado": return "bg-green-100 text-green-800";
-      case "Borrador": return "bg-gray-100 text-gray-800";
-      case "En Revisión": return "bg-yellow-100 text-yellow-800";
-      case "Archivado": return "bg-red-100 text-red-800";
+      case "published": return "bg-green-100 text-green-800";
+      case "draft": return "bg-gray-100 text-gray-800";
+      case "pending_review": return "bg-yellow-100 text-yellow-800";
+      case "archived": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "published": return "Publicado";
+      case "draft": return "Borrador";
+      case "pending_review": return "En Revisión";
+      case "archived": return "Archivado";
+      default: return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <LoadingSpinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,7 +149,7 @@ export default function AdminContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Total Películas</p>
-                    <p className="text-2xl font-bold text-foreground">245</p>
+                    <p className="text-2xl font-bold text-foreground">{totalMovies}</p>
                   </div>
                   <Film className="w-8 h-8 text-blue-500" />
                 </div>
@@ -170,7 +160,7 @@ export default function AdminContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Publicadas</p>
-                    <p className="text-2xl font-bold text-foreground">198</p>
+                    <p className="text-2xl font-bold text-foreground">{publishedMovies}</p>
                   </div>
                   <Eye className="w-8 h-8 text-green-500" />
                 </div>
@@ -181,7 +171,7 @@ export default function AdminContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">En Revisión</p>
-                    <p className="text-2xl font-bold text-foreground">32</p>
+                    <p className="text-2xl font-bold text-foreground">{pendingMovies}</p>
                   </div>
                   <Settings className="w-8 h-8 text-yellow-500" />
                 </div>
@@ -191,10 +181,10 @@ export default function AdminContent() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Almacenamiento</p>
-                    <p className="text-2xl font-bold text-foreground">1.2TB</p>
+                    <p className="text-sm text-muted-foreground">Borradores</p>
+                    <p className="text-2xl font-bold text-foreground">{draftMovies}</p>
                   </div>
-                  <Download className="w-8 h-8 text-purple-500" />
+                  <Edit className="w-8 h-8 text-purple-500" />
                 </div>
               </CardContent>
             </Card>
@@ -271,35 +261,35 @@ export default function AdminContent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {movies.map((movie) => (
+                    {filteredMovies.map((movie) => (
                       <TableRow key={movie.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <img 
-                              src={movie.image} 
+                              src={movie.poster_url || "/placeholder.svg"} 
                               alt={movie.title}
                               className="w-12 h-16 object-cover rounded"
                             />
                             <div>
                               <h4 className="font-medium text-foreground">{movie.title}</h4>
                               <p className="text-sm text-muted-foreground">
-                                {movie.duration} • {movie.size}
+                                {movie.duration ? `${Math.floor(movie.duration / 60)}h ${movie.duration % 60}m` : "N/A"}
                               </p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{movie.category}</Badge>
+                          <Badge variant="outline">{movie.genre?.[0] || "Sin categoría"}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(movie.status)}>
-                            {movie.status}
+                          <Badge className={getStatusColor(movie.status || 'draft')}>
+                            {getStatusLabel(movie.status || 'draft')}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center">
                             <Eye className="w-4 h-4 mr-1 text-muted-foreground" />
-                            {movie.views.toLocaleString()}
+                            {(movie.views || 0).toLocaleString()}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -311,7 +301,7 @@ export default function AdminContent() {
                         <TableCell>
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-1 text-muted-foreground" />
-                            {new Date(movie.uploadDate).toLocaleDateString()}
+                            {new Date(movie.created_at).toLocaleDateString()}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -341,18 +331,18 @@ export default function AdminContent() {
           {/* Grid View */}
           <TabsContent value="grid">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {movies.map((movie) => (
+              {filteredMovies.map((movie) => (
                 <Card key={movie.id} className="overflow-hidden">
                   <div className="relative">
                     <img 
-                      src={movie.image} 
+                      src={movie.poster_url || "/placeholder.svg"} 
                       alt={movie.title}
                       className="w-full h-48 object-cover"
                     />
                     <Badge 
-                      className={`absolute top-2 right-2 ${getStatusColor(movie.status)}`}
+                      className={`absolute top-2 right-2 ${getStatusColor(movie.status || 'draft')}`}
                     >
-                      {movie.status}
+                      {getStatusLabel(movie.status || 'draft')}
                     </Badge>
                   </div>
                   <CardContent className="p-4">
@@ -360,11 +350,11 @@ export default function AdminContent() {
                     <div className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex justify-between">
                         <span>Categoría:</span>
-                        <Badge variant="outline" className="text-xs">{movie.category}</Badge>
+                        <Badge variant="outline" className="text-xs">{movie.genre?.[0] || "Sin categoría"}</Badge>
                       </div>
                       <div className="flex justify-between">
                         <span>Vistas:</span>
-                        <span>{movie.views.toLocaleString()}</span>
+                        <span>{(movie.views || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Rating:</span>
@@ -375,7 +365,7 @@ export default function AdminContent() {
                       </div>
                       <div className="flex justify-between">
                         <span>Duración:</span>
-                        <span>{movie.duration}</span>
+                        <span>{movie.duration ? `${Math.floor(movie.duration / 60)}h ${movie.duration % 60}m` : "N/A"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-4">

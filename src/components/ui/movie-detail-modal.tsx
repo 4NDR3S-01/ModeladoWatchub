@@ -1,17 +1,18 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Plus, ThumbsUp, ThumbsDown, Share, X } from "lucide-react";
+import { Play, Plus, Check, ThumbsUp, ThumbsDown, Share, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { VideoPlayer } from "./video-player";
 import { RatingSystem } from "./rating-system";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useOMDbWatchlist } from "@/hooks/useOMDbWatchlist";
 
 interface MovieDetailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  content: {
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly content: {
     id: string;
     title: string;
     image: string;
@@ -24,13 +25,36 @@ interface MovieDetailModalProps {
     director?: string;
     isNew?: boolean;
     isOriginal?: boolean;
-  };
+    // OMDb specific fields
+    imdbID?: string;
+    Genre?: string;
+    Poster?: string;
+    Title?: string;
+    Year?: string;
+  } | null;
 }
 
 export function MovieDetailModal({ isOpen, onClose, content }: MovieDetailModalProps) {
   const [showPlayer, setShowPlayer] = useState(false);
   const { subscribed } = useSubscription();
+  const { isInWatchlist, toggleWatchlist, loading: watchlistLoading } = useOMDbWatchlist();
   const navigate = useNavigate();
+
+  // If content is null or undefined, don't render the modal
+  if (!content) {
+    return null;
+  }
+
+  // Convert content to simple movie format for watchlist operations
+  const watchlistMovie = {
+    imdbID: content.imdbID || content.id,
+    Title: content.Title || content.title,
+    Year: content.Year || content.year || '',
+    Poster: content.Poster || content.image,
+    Genre: content.Genre || content.category || ''
+  };
+
+  const inWatchlist = isInWatchlist(watchlistMovie.imdbID);
 
   const handlePlay = () => {
     if (!subscribed) {
@@ -38,6 +62,10 @@ export function MovieDetailModal({ isOpen, onClose, content }: MovieDetailModalP
       return;
     }
     setShowPlayer(true);
+  };
+
+  const handleWatchlistToggle = async () => {
+    await toggleWatchlist(watchlistMovie);
   };
 
   if (showPlayer) {
@@ -52,6 +80,7 @@ export function MovieDetailModal({ isOpen, onClose, content }: MovieDetailModalP
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-0 p-0">
+        <DialogTitle className="sr-only">{content.title}</DialogTitle>
         <div className="relative">
           {/* Hero image */}
           <div className="relative aspect-video overflow-hidden rounded-t-lg">
@@ -87,10 +116,21 @@ export function MovieDetailModal({ isOpen, onClose, content }: MovieDetailModalP
                 <Button
                   size="lg"
                   variant="outline"
+                  onClick={handleWatchlistToggle}
+                  disabled={watchlistLoading}
                   className="border-white text-white hover:bg-white hover:text-black px-8"
                 >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Mi lista
+                  {inWatchlist ? (
+                    <>
+                      <Check className="w-5 h-5 mr-2" />
+                      En Mi lista
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-5 h-5 mr-2" />
+                      Mi lista
+                    </>
+                  )}
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button

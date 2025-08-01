@@ -15,6 +15,7 @@ import Categories from "./pages/Categories";
 import Subscriptions from "./pages/Subscriptions";
 import Profiles from "./pages/Profiles";
 import Search from "./pages/Search";
+import MovieSearch from "./pages/MovieSearch";
 import MyList from "./pages/MyList";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/profiles" element={<Profiles />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/movie-search" element={<MovieSearch />} />
           <Route path="/my-list" element={<MyList />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />

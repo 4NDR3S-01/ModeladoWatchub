@@ -13,6 +13,15 @@ export interface Movie {
   rating: number | null;
   views: number | null;
   featured: boolean | null;
+  director: string | null;
+  cast: string[] | null;
+  trailer_url: string | null;
+  backdrop_url: string | null;
+  age_rating: string | null;
+  is_original: boolean | null;
+  status: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export const useMovies = () => {
