@@ -201,10 +201,12 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ## 🌐 Deploy y Producción
 
-### Lovable Platform
-Despliega fácilmente visitando [Lovable](https://lovable.dev/projects/8c2b0d81-05c9-4826-a29e-16ff4dc8c0d5) y haciendo clic en Share → Publish.
+### Plataformas de Deploy
+Puedes desplegar este proyecto en diferentes plataformas como:
+- **Netlify**: Conecta tu repositorio de GitHub para deploys automáticos
+- **Vercel**: Ideal para aplicaciones React con integración GitHub
+- **Railway**: Para aplicaciones full-stack con base de datos
+- **Render**: Hosting gratuito con SSL automático
 
 ### Dominio Personalizado
-Puedes conectar un dominio personalizado en Project > Settings > Domains y hacer clic en Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Configura tu dominio personalizado en la plataforma de hosting elegida siguiendo su documentación específica.
