@@ -35,7 +35,7 @@ export default function PaymentSuccess() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Precio:</span>
-              <span className="font-medium">$9.99/mes</span>
+              <span className="font-medium">$19.99/mes</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Próximo pago:</span>

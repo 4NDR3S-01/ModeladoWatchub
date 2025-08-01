@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, User, Baby, Users, Edit2, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, User, Baby, Users, Edit2, Trash2, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useProfiles } from "@/hooks/useProfiles";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,39 +21,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const profiles = [
-  {
-    id: "1",
-    name: "Ana García",
-    avatar: "1",
-    type: "adult",
-    isMain: true,
-    recentActivity: "Viendo: Breaking Bad",
-    favorites: 12,
-    watchTime: "45h este mes"
-  },
-  {
-    id: "2",
-    name: "Carlos",
-    avatar: "4",
-    type: "adult",
-    isMain: false,
-    recentActivity: "Terminó: Stranger Things",
-    favorites: 8,
-    watchTime: "32h este mes"
-  },
-  {
-    id: "3",
-    name: "Sofía",
-    avatar: "5",
-    type: "kids",
-    isMain: false,
-    recentActivity: "Viendo: Coco",
-    favorites: 15,
-    watchTime: "18h este mes"
-  }
-];
-
 const avatarOptions = [
   { id: "1", name: "Avatar 1", icon: "👤" },
   { id: "2", name: "Avatar 2", icon: "🎭" },
@@ -63,20 +31,26 @@ const avatarOptions = [
 ];
 
 export default function Profiles() {
-  const [profileList, setProfileList] = useState(profiles);
+  const {
+    profiles,
+    loading,
+    MAX_PROFILES,
+    createProfile,
+    updateProfile,
+    deleteProfile
+  } = useProfiles();
+  const { toast } = useToast();
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState("");
   const [newProfileName, setNewProfileName] = useState("");
-  const [newProfileType, setNewProfileType] = useState("adult");
+  const [newProfileType, setNewProfileType] = useState<"adult" | "teen" | "kids">("adult");
   const [selectedAvatar, setSelectedAvatar] = useState("");
-  const { toast } = useToast();
 
-  const MAX_PROFILES = 4;
-
-  const handleCreateProfile = () => {
-    if (profileList.length >= MAX_PROFILES) {
+  const handleCreateProfile = async () => {
+    if (profiles.length >= MAX_PROFILES) {
       toast({
         title: "Límite alcanzado",
         description: `Solo puedes tener un máximo de ${MAX_PROFILES} perfiles.`,
@@ -103,31 +77,22 @@ export default function Profiles() {
       return;
     }
 
-    const newProfile = {
-      id: Date.now().toString(),
+    const success = await createProfile({
       name: newProfileName.trim(),
-      avatar: selectedAvatar,
+      avatar_id: selectedAvatar,
       type: newProfileType,
-      isMain: false,
-      recentActivity: "Nuevo perfil",
-      favorites: 0,
-      watchTime: "0h este mes"
-    };
-
-    setProfileList([...profileList, newProfile]);
-    setIsCreateDialogOpen(false);
-    setNewProfileName("");
-    setNewProfileType("adult");
-    setSelectedAvatar("");
-
-    toast({
-      title: "Perfil creado",
-      description: `El perfil "${newProfile.name}" ha sido creado exitosamente.`,
     });
+
+    if (success) {
+      setIsCreateDialogOpen(false);
+      setNewProfileName("");
+      setNewProfileType("adult");
+      setSelectedAvatar("");
+    }
   };
 
-  const handleEditProfile = () => {
-    const profileToEdit = profileList.find(p => p.id === selectedProfileId);
+  const handleEditProfile = async () => {
+    const profileToEdit = profiles.find(p => p.id === selectedProfileId);
     if (!profileToEdit) return;
 
     if (!newProfileName.trim()) {
@@ -139,57 +104,32 @@ export default function Profiles() {
       return;
     }
 
-    const updatedProfiles = profileList.map(profile => 
-      profile.id === selectedProfileId 
-        ? { 
-            ...profile, 
-            name: newProfileName.trim(), 
-            type: newProfileType, 
-            avatar: selectedAvatar 
-          }
-        : profile
-    );
-
-    setProfileList(updatedProfiles);
-    setIsEditDialogOpen(false);
-    resetEditForm();
-
-    toast({
-      title: "Perfil actualizado",
-      description: `El perfil ha sido actualizado exitosamente.`,
+    const success = await updateProfile(selectedProfileId, {
+      name: newProfileName.trim(),
+      type: newProfileType,
+      avatar_id: selectedAvatar,
     });
+
+    if (success) {
+      setIsEditDialogOpen(false);
+      resetEditForm();
+    }
   };
 
-  const handleDeleteProfile = () => {
-    const profileToDelete = profileList.find(p => p.id === selectedProfileId);
-    if (!profileToDelete) return;
-
-    if (profileToDelete.isMain) {
-      toast({
-        title: "No se puede eliminar",
-        description: "No puedes eliminar el perfil principal.",
-        variant: "destructive",
-      });
+  const handleDeleteProfile = async () => {
+    const success = await deleteProfile(selectedProfileId);
+    
+    if (success) {
       setDeleteDialogOpen(false);
-      return;
+      setSelectedProfileId("");
     }
-
-    const updatedProfiles = profileList.filter(profile => profile.id !== selectedProfileId);
-    setProfileList(updatedProfiles);
-    setDeleteDialogOpen(false);
-    setSelectedProfileId("");
-
-    toast({
-      title: "Perfil eliminado",
-      description: `El perfil "${profileToDelete.name}" ha sido eliminado.`,
-    });
   };
 
   const openEditDialog = (profile: typeof profiles[0]) => {
     setSelectedProfileId(profile.id);
     setNewProfileName(profile.name);
     setNewProfileType(profile.type);
-    setSelectedAvatar(profile.avatar);
+    setSelectedAvatar(profile.avatar_id || "");
     setIsEditDialogOpen(true);
   };
 
@@ -246,75 +186,75 @@ export default function Profiles() {
         </div>
       </div>
 
+      {/* Loading state */}
+      {loading && (
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <p className="text-muted-foreground">Cargando perfiles...</p>
+          </div>
+        </div>
+      )}
+
       {/* Profiles Grid */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {/* Existing Profiles */}
-          {profileList.map((profile) => (
-            <Card key={profile.id} className="hover:shadow-lg transition-shadow duration-300 cursor-pointer group">
-              <CardHeader className="text-center">
-                <div className="relative mx-auto mb-4">
-                  <Avatar className="w-20 h-20 mx-auto border-4 border-primary/20 group-hover:border-primary/40 transition-colors">
-                    <AvatarImage src={profile.avatar} />
-                    <AvatarFallback className="text-2xl bg-primary/10">
-                      {profile.avatar ? getAvatarIcon(profile.avatar) : getProfileIcon(profile.type)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {profile.isMain && (
-                    <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs">
-                      Principal
+      {!loading && (
+        <div className="container mx-auto px-4 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {/* Existing Profiles */}
+            {profiles.map((profile) => (
+              <Card key={profile.id} className="hover:shadow-lg transition-shadow duration-300 cursor-pointer group">
+                <CardHeader className="text-center">
+                  <div className="relative mx-auto mb-4">
+                    <Avatar className="w-20 h-20 mx-auto border-4 border-primary/20 group-hover:border-primary/40 transition-colors">
+                      <AvatarImage src={profile.avatar_id} />
+                      <AvatarFallback className="text-2xl bg-primary/10">
+                        {profile.avatar_id ? getAvatarIcon(profile.avatar_id) : getProfileIcon(profile.type)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {profile.is_main && (
+                      <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs">
+                        Principal
+                      </Badge>
+                    )}
+                  </div>
+                  <CardTitle className="text-xl text-foreground">{profile.name}</CardTitle>
+                  <div className="flex justify-center">
+                    <Badge variant="outline" className="text-xs">
+                      {getProfileTypeLabel(profile.type)}
                     </Badge>
-                  )}
-                </div>
-                <CardTitle className="text-xl text-foreground">{profile.name}</CardTitle>
-                <div className="flex justify-center">
-                  <Badge variant="outline" className="text-xs">
-                    {getProfileTypeLabel(profile.type)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-center">
-                  <p className="text-sm text-primary font-medium">{profile.recentActivity}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div className="text-center">
-                    <div className="font-semibold text-foreground">{profile.favorites}</div>
-                    <div>Favoritos</div>
                   </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="text-center">
-                    <div className="font-semibold text-foreground">{profile.watchTime.split(' ')[0]}</div>
-                    <div>Horas vistas</div>
+                    <p className="text-sm text-primary font-medium">Perfil activo</p>
                   </div>
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    Usar perfil
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => openEditDialog(profile)}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  {!profile.isMain && (
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Usar perfil
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => openDeleteDialog(profile.id)}
-                      className="text-red-500 hover:text-red-700"
+                      onClick={() => openEditDialog(profile)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Edit2 className="w-4 h-4" />
                     </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    {!profile.is_main && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => openDeleteDialog(profile.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
 
           {/* Add Profile Card */}
-          {profileList.length < MAX_PROFILES && (
+          {profiles.length < MAX_PROFILES && (
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Card className="border-dashed border-2 border-muted-foreground/50 hover:border-primary/50 transition-colors cursor-pointer group">
@@ -327,7 +267,7 @@ export default function Profiles() {
                       Crea un nuevo perfil familiar
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      ({profileList.length}/{MAX_PROFILES} perfiles)
+                      ({profiles.length}/{MAX_PROFILES} perfiles)
                     </p>
                   </CardContent>
                 </Card>
@@ -352,7 +292,10 @@ export default function Profiles() {
                   {/* Profile Type */}
                   <div className="space-y-2">
                     <Label>Tipo de perfil</Label>
-                    <Select value={newProfileType} onValueChange={setNewProfileType}>
+                    <Select 
+                      value={newProfileType} 
+                      onValueChange={(value) => setNewProfileType(value as 'adult' | 'teen' | 'kids')}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -407,7 +350,7 @@ export default function Profiles() {
           )}
 
           {/* Max Profiles Reached Message */}
-          {profileList.length >= MAX_PROFILES && (
+          {profiles.length >= MAX_PROFILES && (
             <Card className="border-dashed border-2 border-yellow-500/50 bg-yellow-500/5">
               <CardContent className="flex flex-col items-center justify-center h-full min-h-[300px] text-center">
                 <div className="w-20 h-20 rounded-full border-2 border-dashed border-yellow-500/50 flex items-center justify-center mb-4">
@@ -424,8 +367,10 @@ export default function Profiles() {
             </Card>
           )}
         </div>
+      </div>
+      )}
 
-        {/* Edit Profile Dialog */}
+      {/* Edit Profile Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -446,7 +391,10 @@ export default function Profiles() {
               {/* Profile Type */}
               <div className="space-y-2">
                 <Label>Tipo de perfil</Label>
-                <Select value={newProfileType} onValueChange={setNewProfileType}>
+                <Select 
+                  value={newProfileType} 
+                  onValueChange={(value) => setNewProfileType(value as 'adult' | 'teen' | 'kids')}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -509,7 +457,7 @@ export default function Profiles() {
               <AlertDialogTitle>¿Eliminar perfil?</AlertDialogTitle>
               <AlertDialogDescription>
                 Esta acción no se puede deshacer. Se eliminará permanentemente el perfil
-                "{profileList.find(p => p.id === selectedProfileId)?.name}" y todos sus datos asociados
+                "{profiles.find(p => p.id === selectedProfileId)?.name}" y todos sus datos asociados
                 incluyendo historial de visualización, favoritos y configuraciones.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -569,7 +517,6 @@ export default function Profiles() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

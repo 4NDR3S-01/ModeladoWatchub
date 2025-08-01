@@ -5,6 +5,10 @@ import { Play, Plus, ThumbsUp, Info, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { VideoPlayer } from "./video-player";
 
 interface ContentCardProps {
   id?: string;
@@ -19,6 +23,12 @@ interface ContentCardProps {
   type?: "movie" | "series";
   className?: string;
   onClick?: () => void;
+  // OMDb specific fields for direct play
+  imdbID?: string;
+  Genre?: string;
+  Poster?: string;
+  Title?: string;
+  Year?: string;
 }
 
 export function ContentCard({ 
@@ -33,10 +43,19 @@ export function ContentCard({
   year,
   type = "movie",
   className,
-  onClick 
+  onClick,
+  // OMDb fields
+  imdbID,
+  Genre,
+  Poster,
+  Title,
+  Year
 }: ContentCardProps) {
   const { addToWatchlist, removeFromWatchlist, isInWatchlist, loading: watchlistLoading } = useWatchlist();
   const { user } = useAuth();
+  const { subscribed } = useSubscription();
+  const navigate = useNavigate();
+  const [showPlayer, setShowPlayer] = useState(false);
   
   const inWatchlist = id ? isInWatchlist(id) : false;
 
@@ -49,6 +68,17 @@ export function ContentCard({
     } else {
       addToWatchlist(id);
     }
+  };
+
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!subscribed) {
+      navigate("/subscriptions");
+      return;
+    }
+    
+    setShowPlayer(true);
   };
 
   // Helper functions to format values
@@ -75,6 +105,17 @@ export function ContentCard({
     if (!year) return "";
     return year.toString();
   };
+
+  // If showing video player, render it instead of the card
+  if (showPlayer) {
+    return (
+      <VideoPlayer
+        title={Title || title}
+        onClose={() => setShowPlayer(false)}
+      />
+    );
+  }
+  
   return (
     <Card 
       className={cn(
@@ -119,7 +160,11 @@ export function ContentCard({
           {/* Bottom controls */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Button size="sm" className="rounded-full bg-white text-black hover:bg-white/90 px-4">
+              <Button 
+                size="sm" 
+                className="rounded-full bg-white text-black hover:bg-white/90 px-4"
+                onClick={handlePlay}
+              >
                 <Play className="w-4 h-4 mr-1" />
                 Reproducir
               </Button>

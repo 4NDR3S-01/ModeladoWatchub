@@ -1,21 +1,17 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   Play, 
   Pause, 
   Volume2, 
-  VolumeX, 
-  Maximize, 
-  Settings,
+  VolumeX,
   SkipBack,
   SkipForward,
-  Subtitles,
-  X
+  Settings,
+  Maximize
 } from 'lucide-react';
 import { StreamingSource } from '@/services/streamingService';
-import { cn } from '@/lib/utils';
 
 interface VideoPlayerProps {
   source?: StreamingSource;
@@ -38,16 +34,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
+  const [volume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [selectedQuality, setSelectedQuality] = useState(source?.quality || 'HD');
-  const [showSubtitles, setShowSubtitles] = useState(false);
-
-  const controlsTimeout = useRef<NodeJS.Timeout>();
 
   // Default video URL for demo
   const videoUrl = source?.url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
@@ -61,33 +51,91 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [showControls, isPlaying]);
 
   const togglePlay = () => {
-    setIsPlaying(!isPlaying);
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
   };
 
   const handleMouseMove = () => {
     setShowControls(true);
   };
 
+  // Calculate progress percentage
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       {/* Video container */}
-      <div 
+      <section 
         className="relative flex-1 bg-black cursor-none group"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setShowControls(false)}
+        aria-label="Video player controls"
       >
-        {/* Mock video background */}
-        <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-          <div className="text-center text-white/60">
-            <Play className="w-24 h-24 mx-auto mb-4" />
-            <p className="text-lg">Reproduciendo: {title}</p>
-            {episode && <p className="text-sm">{episode}</p>}
+        {/* Real video element for demo */}
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          src={videoUrl}
+          onLoadedMetadata={() => {
+            setIsLoading(false);
+            setDuration(videoRef.current?.duration || 0);
+            if (videoRef.current) {
+              videoRef.current.volume = volume;
+            }
+          }}
+          onTimeUpdate={() => {
+            if (videoRef.current) {
+              setCurrentTime(videoRef.current.currentTime);
+              onProgress?.(videoRef.current.currentTime);
+            }
+          }}
+          onEnded={() => setIsPlaying(false)}
+          muted={isMuted}
+        >
+          <track
+            kind="captions"
+            src=""
+            srcLang="es"
+            label="Español"
+            default
+          />
+        </video>
+
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+            <div className="text-center text-white">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <p className="text-lg">Cargando: {title}</p>
+              {episode && <p className="text-sm text-white/80">{episode}</p>}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Fallback when no video available */}
+        {!videoUrl && (
+          <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+            <div className="text-center text-white/60">
+              <Play className="w-24 h-24 mx-auto mb-4" />
+              <p className="text-lg">Reproduciendo: {title}</p>
+              {episode && <p className="text-sm">{episode}</p>}
+              <p className="text-sm text-white/40 mt-2">Video de demostración</p>
+            </div>
+          </div>
+        )}
 
         {/* Top bar */}
         <div className={`absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
@@ -190,7 +238,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
-}
+};

@@ -50,13 +50,13 @@ serve(async (req) => {
     let unitAmount;
     switch (plan) {
       case "Basic":
-        unitAmount = 799; // $7.99
+        unitAmount = 999; // $9.99
         break;
       case "Standard":
-        unitAmount = 1299; // $12.99
+        unitAmount = 1499; // $14.99
         break;
       case "Premium":
-        unitAmount = 1899; // $18.99
+        unitAmount = 1999; // $19.99
         break;
       default:
         throw new Error("Invalid plan");

@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Plus, Check, ThumbsUp, ThumbsDown, Share, X } from "lucide-react";
@@ -81,6 +81,9 @@ export function MovieDetailModal({ isOpen, onClose, content }: MovieDetailModalP
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background border-0 p-0">
         <DialogTitle className="sr-only">{content.title}</DialogTitle>
+        <DialogDescription className="sr-only">
+          {content.description || `Detalles de la película ${content.title}`}
+        </DialogDescription>
         <div className="relative">
           {/* Hero image */}
           <div className="relative aspect-video overflow-hidden rounded-t-lg">

@@ -51,8 +51,8 @@ serve(async (req) => {
     // Plan pricing
     const planPricing: { [key: string]: { amount: string, name: string } } = {
       "basic": { amount: "9.99", name: "Plan Básico" },
-      "premium": { amount: "19.99", name: "Plan Premium" },
-      "enterprise": { amount: "29.99", name: "Plan Enterprise" }
+      "standard": { amount: "14.99", name: "Plan Estándar" },
+      "premium": { amount: "19.99", name: "Plan Premium" }
     };
 
     const selectedPlan = planPricing[plan.toLowerCase()];

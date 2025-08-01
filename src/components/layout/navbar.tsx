@@ -14,12 +14,41 @@ import { Search, Bell, User, Settings, LogOut, Menu, X, Crown, CreditCard } from
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { profile } = useUserProfile();
+  const { subscribed, subscriptionPlan } = useSubscription();
   const navigate = useNavigate();
+
+  // Helper function to get subscription plan display
+  const getSubscriptionPlanDisplay = (plan: string) => {
+    switch (plan?.toLowerCase()) {
+      case 'premium':
+        return 'Plan Premium';
+      case 'standard':
+        return 'Plan Estándar';
+      case 'basic':
+        return 'Plan Básico';
+      default:
+        return subscribed ? 'Plan Premium' : 'Plan Básico';
+    }
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (profile?.display_name) {
+      return profile.display_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'Usuario';
+  };
 
   const handleSignOut = async () => {
     try {
@@ -109,9 +138,9 @@ export function Navbar() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="" alt="Usuario" />
+                        <AvatarImage src={profile?.avatar_url || ""} alt="Usuario" />
                         <AvatarFallback className="bg-primary text-primary-foreground">
-                          {user.email?.charAt(0).toUpperCase() || <User className="w-4 h-4" />}
+                          {getUserDisplayName().charAt(0).toUpperCase() || <User className="w-4 h-4" />}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
@@ -119,13 +148,15 @@ export function Navbar() {
                   <DropdownMenuContent className="w-64 bg-popover border-border shadow-lg" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">Usuario</p>
+                        <p className="text-sm font-medium leading-none">{getUserDisplayName()}</p>
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>
                         <div className="flex items-center mt-2">
                           <Crown className="w-3 h-3 text-premium-gold mr-1" />
-                          <span className="text-xs text-premium-gold font-medium">Plan Premium</span>
+                          <span className="text-xs text-premium-gold font-medium">
+                            {getSubscriptionPlanDisplay(profile?.subscription_plan || subscriptionPlan)}
+                          </span>
                         </div>
                       </div>
                     </DropdownMenuLabel>

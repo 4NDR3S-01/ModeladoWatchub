@@ -84,16 +84,29 @@ export const useOMDbWatchlist = () => {
       });
     } catch (error: any) {
       console.error('Error adding to watchlist:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      
       if (error.code === '23505' || error.message.includes('duplicate')) {
         toast({
           title: "Ya está en tu lista",
           description: "Esta película ya está en tu lista de reproducción.",
           variant: "destructive",
         });
+      } else if (error.message.includes('violates check constraint')) {
+        toast({
+          title: "Error de validación",
+          description: "Los datos de la película no son válidos.",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Error",
-          description: "No se pudo agregar la película a tu lista.",
+          description: `No se pudo agregar la película: ${error.message}`,
           variant: "destructive",
         });
       }
