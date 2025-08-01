@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Categories from "./pages/Categories";
 import Subscriptions from "./pages/Subscriptions";
 import Profiles from "./pages/Profiles";
@@ -16,6 +18,7 @@ import Search from "./pages/Search";
 import MyList from "./pages/MyList";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
+import AdminForgotPassword from "./pages/AdminForgotPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminContent from "./pages/AdminContent";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
@@ -42,6 +45,8 @@ const App = () => (
           <Route path="/home" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/profiles" element={<Profiles />} />
@@ -51,6 +56,8 @@ const App = () => (
           <Route path="/payment-success" element={<PaymentSuccess />} />
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+          <Route path="/admin/reset-password" element={<ResetPassword />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
