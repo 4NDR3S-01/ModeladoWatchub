@@ -19,6 +19,7 @@ import MyList from "./pages/MyList";
 import Settings from "./pages/Settings";
 import AdminLogin from "./pages/AdminLogin";
 import AdminForgotPassword from "./pages/AdminForgotPassword";
+import AdminResetPassword from "./pages/AdminResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminContent from "./pages/AdminContent";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
@@ -42,6 +43,7 @@ const App = () => (
         <BrowserRouter>
         <Routes>
           <Route path="/" element={<Welcome />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/home" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -57,7 +59,7 @@ const App = () => (
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
-          <Route path="/admin/reset-password" element={<ResetPassword />} />
+          <Route path="/admin/reset-password" element={<AdminResetPassword />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />

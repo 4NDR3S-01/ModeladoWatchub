@@ -22,8 +22,15 @@ export function Navbar() {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/welcome");
+    try {
+      await signOut();
+      // Force navigation to welcome page
+      navigate("/welcome", { replace: true });
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Still navigate to welcome even if there's an error
+      navigate("/welcome", { replace: true });
+    }
   };
 
   useEffect(() => {
