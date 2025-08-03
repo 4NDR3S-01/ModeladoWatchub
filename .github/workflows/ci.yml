@@ -53,13 +53,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Build the application for production
+      - name: Build application
+        run: npm run build
+
       # Install the Playwright browsers.  The `--with-deps` flag installs system dependencies required for the browsers to run
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
       # Run the Playwright end‑to‑end tests using project script if available
       - name: Run e2e tests
-        run: npm run test:e2e
+        run: npm run test:e2e:ci
 
       # Upload Playwright traces and reports
       - name: Upload Playwright results

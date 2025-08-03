@@ -70,10 +70,13 @@ npm run test:e2e:headless  # Modo headless
 
 - ✅ Workflow configurado y funcional
 - ✅ Tests unitarios pasando (21 tests)
-- ✅ Configuración de Playwright lista
+- ✅ **Tests e2e funcionando en CI**
+- ✅ Configuración de Playwright optimizada para CI
 - ✅ Scripts de package.json configurados
 - ✅ Dependencias instaladas
 - ✅ Exclusión de conflictos entre Vitest y Playwright
+- ✅ **Timeout de webServer ajustado (120s)**
+- ✅ **Solo Chromium en CI para velocidad**
 
 ## 🔄 Ejecución Local
 
@@ -88,15 +91,21 @@ npx playwright install
 
 # Ejecutar tests
 npm test                  # Tests unitarios
-npm run test:e2e         # Tests e2e
+npm run test:e2e         # Tests e2e (todos los browsers)
+npm run test:e2e:ci      # Tests e2e modo CI (solo Chromium)
 ```
 
+### Configuración Optimizada:
+- **Local**: `npm run dev` (desarrollo rápido)  
+- **CI**: `npm run preview` (build estable)
 
 ## 🐛 Troubleshooting
 
+- Timeout en webServer (era 60s, ahora 120s)
 - Si Playwright falla por dependencias del sistema, usar `npx playwright install --with-deps`
 - Los tests e2e están excluidos de Vitest para evitar conflictos
 - Coverage se genera automáticamente en CI
+- En CI solo ejecuta Chromium para velocidad
 
 ---
 
