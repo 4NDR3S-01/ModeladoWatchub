@@ -36,7 +36,7 @@ describe('Utils Library', () => {
 interface TestButtonProps {
   className?: string;
   children: React.ReactNode;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const TestButton = ({ className, children, ...props }: TestButtonProps) => {
