@@ -24,6 +24,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Vitest and its coverage provider are not listed in the project's package.json, so we
+      # install them here on the fly. Without these packages, `npx vitest` will try to
+      # download the latest versions at runtime and fail due to missing peer dependencies.
+      - name: Install Vitest and related test utilities
+        run: |
+          npm install --no-save vitest jsdom @vitest/coverage-v8
+
       # Run vitest in CI mode.  The `--coverage` flag generates a coverage report.
       - name: Run unit and integration tests
         run: npx vitest run --coverage
