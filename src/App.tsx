@@ -18,6 +18,7 @@ import Search from "./pages/Search";
 import MovieSearch from "./pages/MovieSearch";
 import MyList from "./pages/MyList";
 import Settings from "./pages/Settings";
+import PaymentSettings from "./pages/PaymentSettings";
 import AdminLogin from "./pages/AdminLogin";
 import AdminForgotPassword from "./pages/AdminForgotPassword";
 import AdminResetPassword from "./pages/AdminResetPassword";
@@ -27,6 +28,9 @@ import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminUsers from "./pages/AdminUsers";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import PayPalDemo from "./pages/PayPalDemo";
+import PayPalDiagnostic from "./pages/PayPalDiagnostic";
+import EnvDiagnostic from "./pages/EnvDiagnostic";
 import NotFound from "./pages/NotFound";
 import { BackToTop } from "./components/ui/back-to-top";
 import { ScrollProgress } from "./components/ui/scroll-progress";
@@ -57,7 +61,11 @@ const App = () => (
           <Route path="/movie-search" element={<MovieSearch />} />
           <Route path="/my-list" element={<MyList />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/payment-settings" element={<PaymentSettings />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/paypal-demo" element={<PayPalDemo />} />
+          <Route path="/paypal-diagnostic" element={<PayPalDiagnostic />} />
+          <Route path="/env-diagnostic" element={<EnvDiagnostic />} />
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />

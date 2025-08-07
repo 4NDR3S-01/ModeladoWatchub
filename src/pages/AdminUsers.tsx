@@ -7,60 +7,46 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Search, UserPlus, Filter, Mail, Shield, Ban, CheckCircle } from "lucide-react";
+import { MoreHorizontal, Search, UserPlus, Filter, Mail, Shield, Ban, CheckCircle, RefreshCw, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
+  
+  const { users, stats, loading, error, refetch } = useAdminUsers();
 
-  const users = [
-    {
-      id: "1",
-      name: "María García",
-      email: "maria.garcia@email.com",
-      avatar: "/placeholder.svg",
-      role: "Premium",
-      status: "active",
-      joinDate: "2024-01-15",
-      lastLogin: "2024-01-20",
-      watchTime: "25h 30m"
-    },
-    {
-      id: "2", 
-      name: "Carlos López",
-      email: "carlos.lopez@email.com",
-      avatar: "/placeholder.svg",
-      role: "Basic",
-      status: "active",
-      joinDate: "2024-01-10",
-      lastLogin: "2024-01-19",
-      watchTime: "12h 45m"
-    },
-    {
-      id: "3",
-      name: "Ana Martínez",
-      email: "ana.martinez@email.com", 
-      avatar: "/placeholder.svg",
-      role: "Premium",
-      status: "suspended",
-      joinDate: "2023-12-20",
-      lastLogin: "2024-01-18",
-      watchTime: "45h 20m"
-    },
-    {
-      id: "4",
-      name: "Luis Rodríguez",
-      email: "luis.rodriguez@email.com",
-      avatar: "/placeholder.svg",
-      role: "Basic",
-      status: "pending",
-      joinDate: "2024-01-18",
-      lastLogin: "Never",
-      watchTime: "0h 0m"
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center h-64">
+            <LoadingSpinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={refetch} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -102,10 +88,16 @@ export default function AdminUsers() {
                 Administra y monitorea todos los usuarios de la plataforma
               </p>
             </div>
-            <Button className="glass hover-scale">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Nuevo Usuario
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={refetch}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Actualizar
+              </Button>
+              <Button className="glass hover-scale">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nuevo Usuario
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -116,25 +108,25 @@ export default function AdminUsers() {
           <Card className="glass hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Usuarios</CardTitle>
-              <div className="text-2xl font-bold">1,248</div>
+              <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
             </CardHeader>
           </Card>
           <Card className="glass hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Usuarios Activos</CardTitle>
-              <div className="text-2xl font-bold text-green-600">1,156</div>
+              <div className="text-2xl font-bold text-green-600">{stats.activeUsers.toLocaleString()}</div>
             </CardHeader>
           </Card>
           <Card className="glass hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Premium</CardTitle>
-              <div className="text-2xl font-bold text-amber-600">342</div>
+              <div className="text-2xl font-bold text-amber-600">{stats.premiumUsers.toLocaleString()}</div>
             </CardHeader>
           </Card>
           <Card className="glass hover-scale">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Nuevos (30d)</CardTitle>
-              <div className="text-2xl font-bold text-blue-600">84</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.newUsers.toLocaleString()}</div>
             </CardHeader>
           </Card>
         </div>
@@ -206,50 +198,63 @@ export default function AdminUsers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-accent/50">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{user.name}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
-                          </div>
+                  {filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <Users className="w-12 h-12 text-muted-foreground" />
+                          <p className="text-muted-foreground">
+                            {users.length === 0 ? 'No hay usuarios registrados' : 'No se encontraron usuarios con los filtros aplicados'}
+                          </p>
                         </div>
                       </TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell>{getStatusBadge(user.status)}</TableCell>
-                      <TableCell className="text-sm">{user.joinDate}</TableCell>
-                      <TableCell className="text-sm">{user.lastLogin}</TableCell>
-                      <TableCell className="text-sm font-mono">{user.watchTime}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Mail className="w-4 h-4 mr-2" />
-                              Enviar Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Shield className="w-4 h-4 mr-2" />
-                              Cambiar Plan
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
-                              <Ban className="w-4 h-4 mr-2" />
-                              Suspender
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow key={user.id} className="hover:bg-accent/50">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={user.avatar || "/placeholder.svg"} />
+                              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{user.name}</div>
+                              <div className="text-sm text-muted-foreground">{user.email}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell>{getStatusBadge(user.status)}</TableCell>
+                        <TableCell className="text-sm">{user.joinDate}</TableCell>
+                        <TableCell className="text-sm">{user.lastLogin}</TableCell>
+                        <TableCell className="text-sm font-mono">{user.watchTime}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Mail className="w-4 h-4 mr-2" />
+                                Enviar Email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Shield className="w-4 h-4 mr-2" />
+                                Cambiar Plan
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                <Ban className="w-4 h-4 mr-2" />
+                                Suspender
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

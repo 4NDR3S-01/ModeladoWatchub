@@ -22,7 +22,18 @@ serve(async (req) => {
     const paypalClientId = Deno.env.get("PAYPAL_CLIENT_ID");
     const paypalClientSecret = Deno.env.get("PAYPAL_CLIENT_SECRET");
     
+    logStep("Checking PayPal credentials", { 
+      hasClientId: !!paypalClientId, 
+      clientIdLength: paypalClientId?.length || 0,
+      hasClientSecret: !!paypalClientSecret,
+      secretLength: paypalClientSecret?.length || 0
+    });
+    
     if (!paypalClientId || !paypalClientSecret) {
+      logStep("ERROR: PayPal credentials missing", { 
+        clientId: paypalClientId ? "present" : "missing",
+        clientSecret: paypalClientSecret ? "present" : "missing"
+      });
       throw new Error("PayPal credentials not configured");
     }
     logStep("PayPal credentials verified");
@@ -60,7 +71,15 @@ serve(async (req) => {
 
     // Get PayPal access token
     const paypalAuth = btoa(`${paypalClientId}:${paypalClientSecret}`);
-    const authResponse = await fetch("https://api-m.sandbox.paypal.com/v1/oauth2/token", {
+    
+    // Determinar la URL de PayPal (sandbox o producción)
+    const paypalBaseUrl = paypalClientId.includes('sandbox') || paypalClientId.startsWith('AV') 
+      ? "https://api-m.sandbox.paypal.com" 
+      : "https://api-m.paypal.com";
+    
+    logStep("Using PayPal environment", { baseUrl: paypalBaseUrl });
+    
+    const authResponse = await fetch(`${paypalBaseUrl}/v1/oauth2/token`, {
       method: "POST",
       headers: {
         "Authorization": `Basic ${paypalAuth}`,
@@ -77,28 +96,30 @@ serve(async (req) => {
     const accessToken = authData.access_token;
     logStep("PayPal access token obtained");
 
-    // Create subscription
+    // Create subscription - usando pagos únicos primero para testing
     const origin = req.headers.get("origin") || "http://localhost:3000";
-    const subscriptionData = {
-      plan_id: `WATCHHUB_${plan.toUpperCase()}_MONTHLY`, // You need to create these plans in PayPal first
+    
+    // En lugar de suscripciones, usar pagos únicos que funcionan inmediatamente
+    const paymentData = {
+      intent: "CAPTURE",
+      purchase_units: [{
+        amount: {
+          currency_code: "USD",
+          value: selectedPlan.amount,
+        },
+        description: `WatchHub ${selectedPlan.name} - Suscripción Mensual`,
+      }],
       application_context: {
         brand_name: "WatchHub",
-        locale: "es-MX",
-        shipping_preference: "NO_SHIPPING",
-        user_action: "SUBSCRIBE_NOW",
-        payment_method: {
-          payer_selected: "PAYPAL",
-          payee_preferred: "IMMEDIATE_PAYMENT_REQUIRED",
-        },
-        return_url: `${origin}/payment-success?provider=paypal&type=subscription`,
+        user_action: "PAY_NOW",
+        return_url: `${origin}/payment-success?provider=paypal&type=subscription&plan=${plan}`,
         cancel_url: `${origin}/payment-canceled`,
-      },
-      subscriber: {
-        email_address: user.email,
       },
     };
 
-    const subscriptionResponse = await fetch("https://api-m.sandbox.paypal.com/v1/billing/subscriptions", {
+    logStep("Creating PayPal payment (subscription simulation)", { amount: selectedPlan.amount });
+
+    const subscriptionResponse = await fetch(`${paypalBaseUrl}/v2/checkout/orders`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -106,33 +127,33 @@ serve(async (req) => {
         "Accept": "application/json",
         "Prefer": "return=representation",
       },
-      body: JSON.stringify(subscriptionData),
+      body: JSON.stringify(paymentData),
     });
 
     if (!subscriptionResponse.ok) {
       const errorData = await subscriptionResponse.json();
-      logStep("PayPal subscription creation failed", errorData);
-      throw new Error("Failed to create PayPal subscription");
+      logStep("PayPal payment creation failed", errorData);
+      throw new Error("Failed to create PayPal payment");
     }
 
-    const subscription = await subscriptionResponse.json();
-    logStep("PayPal subscription created", { subscriptionId: subscription.id });
+    const payment = await subscriptionResponse.json();
+    logStep("PayPal payment created", { paymentId: payment.id });
 
-    // Store subscription info in database
+    // Store payment info in database (simulating subscription)
     await supabaseClient.from("paypal_subscriptions").insert({
       user_id: user.id,
-      paypal_subscription_id: subscription.id,
+      paypal_subscription_id: payment.id,
       plan_name: selectedPlan.name,
       amount: parseFloat(selectedPlan.amount),
       status: "pending",
       created_at: new Date().toISOString(),
     });
 
-    const approvalUrl = subscription.links.find((link: any) => link.rel === "approve")?.href;
+    const approvalUrl = payment.links.find((link: any) => link.rel === "approve")?.href;
     
     return new Response(JSON.stringify({ 
       url: approvalUrl,
-      subscriptionId: subscription.id 
+      subscriptionId: payment.id 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
