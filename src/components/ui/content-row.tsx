@@ -38,35 +38,35 @@ export function ContentRow({ title, subtitle, items, onItemClick }: ContentRowPr
   };
 
   return (
-    <section className="py-8">
-      <div className="container mx-auto px-6 lg:px-8">
+    <section className="py-6 sm:py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div>
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-1">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-muted-foreground">{subtitle}</p>
+              <p className="text-muted-foreground text-sm sm:text-base">{subtitle}</p>
             )}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={scrollLeft}
-              className="rounded-full p-2 w-10 h-10"
+              className="rounded-full p-2 w-8 h-8 sm:w-10 sm:h-10"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={scrollRight}
-              className="rounded-full p-2 w-10 h-10"
+              className="rounded-full p-2 w-8 h-8 sm:w-10 sm:h-10"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </div>
@@ -75,11 +75,11 @@ export function ContentRow({ title, subtitle, items, onItemClick }: ContentRowPr
         <div className="relative overflow-hidden">
           <div
             ref={scrollRef}
-            className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
+            className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-4 snap-x snap-mandatory"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {items.map((item) => (
-              <div key={item.id} className="flex-none w-48 lg:w-52">
+              <div key={item.id} className="flex-none w-36 sm:w-44 lg:w-52 snap-start">
                 <ContentCard
                   title={item.title}
                   image={item.image}

@@ -119,7 +119,7 @@ export function ContentCard({
   return (
     <Card 
       className={cn(
-        "group relative overflow-hidden border-0 bg-card transition-all duration-300 hover:scale-105 hover:shadow-card-hover cursor-pointer",
+        "group relative overflow-hidden border-0 bg-card transition-all duration-300 hover:scale-105 hover:shadow-card-hover cursor-pointer w-full",
         className
       )}
       onClick={onClick}
@@ -129,13 +129,14 @@ export function ContentCard({
           src={image} 
           alt={title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading="lazy"
         />
         
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
         {/* Content overlay */}
-        <div className="absolute inset-0 flex flex-col justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-0 flex flex-col justify-between p-3 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           {/* Top badges */}
           <div className="flex justify-between items-start">
             <div className="flex flex-col gap-1">
@@ -158,41 +159,41 @@ export function ContentCard({
           </div>
           
           {/* Bottom controls */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
               <Button 
                 size="sm" 
-                className="rounded-full bg-white text-black hover:bg-white/90 px-4"
+                className="rounded-full bg-white text-black hover:bg-white/90 px-3 sm:px-4 text-xs sm:text-sm"
                 onClick={handlePlay}
               >
-                <Play className="w-4 h-4 mr-1" />
+                <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 Reproducir
               </Button>
               {user && id && (
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="rounded-full border-white text-white hover:bg-white hover:text-black p-2"
+                  className="rounded-full border-white text-white hover:bg-white hover:text-black p-1.5 sm:p-2"
                   onClick={handleWatchlistToggle}
                   disabled={watchlistLoading}
                 >
-                  {inWatchlist ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {inWatchlist ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : <Plus className="w-3 h-3 sm:w-4 sm:h-4" />}
                 </Button>
               )}
-              <Button size="sm" variant="outline" className="rounded-full border-white text-white hover:bg-white hover:text-black p-2">
-                <ThumbsUp className="w-4 h-4" />
+              <Button size="sm" variant="outline" className="rounded-full border-white text-white hover:bg-white hover:text-black p-1.5 sm:p-2">
+                <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
-              <Button size="sm" variant="outline" className="rounded-full border-white text-white hover:bg-white hover:text-black p-2">
-                <Info className="w-4 h-4" />
+              <Button size="sm" variant="outline" className="rounded-full border-white text-white hover:bg-white hover:text-black p-1.5 sm:p-2">
+                <Info className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
             
             <div className="text-white">
-              <h3 className="font-semibold text-sm mb-2 line-clamp-2">{title}</h3>
-              <div className="flex items-center gap-2 text-xs text-white/80 mb-1">
+              <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 line-clamp-2">{title}</h3>
+              <div className="flex items-center gap-1 sm:gap-2 text-xs text-white/80 mb-1 flex-wrap">
                 {year && <span className="text-green-400 font-semibold">{formatYear(year)}</span>}
-                {duration && <span>{formatDuration(duration)}</span>}
-                {category && <span>• {category}</span>}
+                {duration && <span className="whitespace-nowrap">{formatDuration(duration)}</span>}
+                {category && <span className="hidden sm:inline">• {category}</span>}
               </div>
               <div className="flex items-center gap-1 text-xs text-white/60">
                 <span className="bg-white/20 px-1 rounded text-xs">HD</span>
