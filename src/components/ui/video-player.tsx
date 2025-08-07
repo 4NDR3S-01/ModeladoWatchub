@@ -11,9 +11,11 @@ import {
   Settings,
   Maximize,
   ArrowLeft,
-  Loader2
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
 import { StreamingSource } from '@/services/streamingService';
+import { useVideoProgress } from '@/hooks/useVideoProgress';
 // Formats seconds as mm:ss or hh:mm:ss
 function formatDuration(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -33,6 +35,7 @@ interface VideoPlayerProps {
   onClose?: () => void;
   onProgress?: (progress: number) => void;
   startTime?: number;
+  videoId?: string; // New prop for video identification
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -41,10 +44,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   episode,
   onClose,
   onProgress,
-  startTime = 0
+  startTime = 0,
+  videoId = title // Use title as fallback videoId
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Video progress hook
+  const { 
+    progress: savedProgress, 
+    saveProgress, 
+    clearProgress, 
+    shouldResume,
+    getProgressPercentage 
+  } = useVideoProgress(videoId);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -54,9 +69,40 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mouseCursor, setMouseCursor] = useState('cursor-pointer');
+  const [showResumeDialog, setShowResumeDialog] = useState(false);
 
   // Default video URL for demo
   const videoUrl = source?.url || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+
+  // Save progress with debouncing to avoid too many localStorage writes
+  const debouncedSaveProgress = useCallback((currentTime: number, duration: number) => {
+    if (progressSaveTimeoutRef.current) {
+      clearTimeout(progressSaveTimeoutRef.current);
+    }
+    
+    progressSaveTimeoutRef.current = setTimeout(() => {
+      saveProgress(currentTime, duration);
+    }, 1000); // Save every second, but debounced
+  }, [saveProgress]);
+
+  // Resume from saved position
+  const handleResume = useCallback(() => {
+    if (savedProgress && videoRef.current) {
+      videoRef.current.currentTime = savedProgress.currentTime;
+      setCurrentTime(savedProgress.currentTime);
+      setShowResumeDialog(false);
+    }
+  }, [savedProgress]);
+
+  // Start from beginning
+  const handleStartOver = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      setCurrentTime(0);
+      clearProgress();
+      setShowResumeDialog(false);
+    }
+  }, [clearProgress]);
 
   // Auto-hide controls logic with proper cleanup
   const resetControlsTimeout = () => {
@@ -103,19 +149,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
       setIsLoading(false);
-      if (startTime > 0) {
+      
+      // Check if we should resume or start from a specific time
+      if (shouldResume() && savedProgress) {
+        setShowResumeDialog(true);
+      } else if (startTime > 0) {
         video.currentTime = startTime;
       }
     };
 
     const handleTimeUpdate = () => {
-      setCurrentTime(video.currentTime);
-      onProgress?.(video.currentTime);
+      const currentTime = video.currentTime;
+      const duration = video.duration;
+      
+      setCurrentTime(currentTime);
+      onProgress?.(currentTime);
+      
+      // Save progress automatically (debounced)
+      if (duration > 0 && currentTime > 5) { // Only save after 5 seconds
+        debouncedSaveProgress(currentTime, duration);
+      }
     };
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // Mark as completed when video ends
+      if (video.duration > 0) {
+        saveProgress(video.duration, video.duration);
+      }
+    };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -129,8 +193,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
+      
+      // Clear timeouts on cleanup
+      if (progressSaveTimeoutRef.current) {
+        clearTimeout(progressSaveTimeoutRef.current);
+      }
     };
-  }, [startTime, onProgress]);
+  }, [startTime, onProgress, shouldResume, savedProgress, debouncedSaveProgress, saveProgress]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -291,6 +360,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             default
           />
         </video>
+
+        {/* Resume dialog */}
+        {showResumeDialog && savedProgress && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Continuar viendo "{title}"
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Tienes progreso guardado en {formatDuration(savedProgress.currentTime)} de {formatDuration(savedProgress.duration)}
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${getProgressPercentage()}%` }}
+                ></div>
+              </div>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  variant="outline"
+                  onClick={handleStartOver}
+                  className="flex items-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Empezar de nuevo
+                </Button>
+                <Button
+                  onClick={handleResume}
+                  className="flex items-center gap-2"
+                >
+                  <Play className="w-4 h-4" />
+                  Continuar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Loading overlay */}
         {isLoading && (

@@ -56,6 +56,7 @@ export function TopTenRow({ title, items }: TopTenRowProps) {
       return (
         <VideoPlayer
           title={playingItem.title}
+          videoId={playingItem.id}
           onClose={() => setShowPlayer(null)}
         />
       );

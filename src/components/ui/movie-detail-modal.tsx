@@ -72,6 +72,7 @@ export function MovieDetailModal({ isOpen, onClose, content }: MovieDetailModalP
     return (
       <VideoPlayer
         title={content.title}
+        videoId={content.imdbID || content.title}
         onClose={() => setShowPlayer(false)}
       />
     );

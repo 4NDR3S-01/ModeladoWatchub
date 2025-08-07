@@ -9,6 +9,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { VideoPlayer } from "@/components/ui/video-player";
+import { useVideoProgress } from "@/hooks/useVideoProgress";
 
 interface ContentCardProps {
   id?: string;
@@ -56,6 +57,10 @@ export function ContentCard({
   const { subscribed } = useSubscription();
   const navigate = useNavigate();
   const [showPlayer, setShowPlayer] = useState(false);
+  
+  // Get video progress for this content
+  const videoIdForProgress = imdbID || id || title;
+  const { progress, getProgressPercentage } = useVideoProgress(videoIdForProgress);
   
   const inWatchlist = id ? isInWatchlist(id) : false;
 
@@ -112,6 +117,7 @@ export function ContentCard({
     return (
       <VideoPlayer
         title={Title || title}
+        videoId={imdbID || id || title} // Use imdbID, fallback to id, then title
         onClose={() => setShowPlayer(false)}
       />
     );
@@ -132,6 +138,25 @@ export function ContentCard({
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           loading="lazy"
         />
+        
+        {/* Progress bar if video has been watched */}
+        {progress && getProgressPercentage() > 5 && !progress.completed && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600">
+            <div 
+              className="h-full bg-red-600 transition-all duration-300"
+              style={{ width: `${getProgressPercentage()}%` }}
+            />
+          </div>
+        )}
+        
+        {/* Completed badge */}
+        {progress && progress.completed && (
+          <div className="absolute top-2 left-2 z-10">
+            <Badge className="bg-green-600 text-white text-xs">
+              ✓ Visto
+            </Badge>
+          </div>
+        )}
         
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -168,7 +193,7 @@ export function ContentCard({
                 onClick={handlePlay}
               >
                 <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1 fill-current" />
-                Reproducir
+                {progress && getProgressPercentage() > 5 && !progress.completed ? 'Continuar' : 'Reproducir'}
               </Button>
               {user && id && (
                 <Button 

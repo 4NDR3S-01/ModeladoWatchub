@@ -58,6 +58,7 @@ export function HeroSection({ movies = [], onMovieClick }: HeroSectionProps) {
     return (
       <VideoPlayer
         title={hasMovies ? currentMovie.title : "El Último Guardián"}
+        videoId={hasMovies ? (currentMovie.imdb_id || currentMovie.title) : "el-ultimo-guardian"}
         onClose={() => setShowPlayer(false)}
       />
     );
