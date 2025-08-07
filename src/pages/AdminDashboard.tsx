@@ -12,10 +12,10 @@ import {
   Star,
   Download,
   Settings,
-  Bell,
-  Search,
-  Plus,
-  MoreVertical
+  MoreVertical,
+  LogOut,
+  User,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,13 +23,46 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Link } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link, useNavigate } from "react-router-dom";
 import { useAdminMetrics } from "@/hooks/useAdminMetrics";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
   const { metrics, contentMetrics, topMovies, recentActivities, loading, error } = useAdminMetrics();
+  const { signOut, user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión exitosamente.",
+      });
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al cerrar sesión.",
+        variant: "destructive",
+      });
+      // Navegamos de todas formas en caso de error
+      navigate("/login", { replace: true });
+    }
+  };
 
   if (loading) {
     return (
@@ -115,19 +148,44 @@ export default function AdminDashboard() {
             </div>
             
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm">
-                <Search className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Bell className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Settings className="w-4 h-4" />
-              </Button>
-              <Avatar className="w-8 h-8">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-red-500 text-white">AD</AvatarFallback>
-              </Avatar>
+              {/* Dropdown Menu for Profile */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src="" />
+                      <AvatarFallback className="bg-red-500 text-white">
+                        {user?.email?.charAt(0).toUpperCase() || 'AD'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <ChevronDown className="absolute -bottom-1 -right-1 w-3 h-3 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">Administrador</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email || 'admin@watchhub.com'}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configuración</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Cerrar sesión</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

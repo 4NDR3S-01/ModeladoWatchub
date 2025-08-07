@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { 
   CreditCard, 
-  Plus, 
   Edit, 
   Trash2, 
   Users, 
@@ -11,7 +10,10 @@ import {
   MoreVertical,
   Settings,
   Eye,
-  Crown
+  Crown,
+  Loader2,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,14 +24,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
+import { useAdminSubscriptions } from "@/hooks/useAdminSubscriptions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminSubscriptions() {
   const [editingPlan, setEditingPlan] = useState<number | null>(null);
+  const { stats, plans, recentSubscriptions, loading, error, refetch } = useAdminSubscriptions();
+  const { toast } = useToast();
 
   const subscriptionStats = [
     {
       title: "Ingresos Mensuales",
-      value: "$127,450",
+      value: `$${stats.monthlyRevenue.toLocaleString()}`,
       change: "+12.5%",
       trend: "up",
       icon: DollarSign,
@@ -37,7 +43,7 @@ export default function AdminSubscriptions() {
     },
     {
       title: "Suscriptores Activos",
-      value: "18,492",
+      value: stats.activeSubscribers.toLocaleString(),
       change: "+8.2%",
       trend: "up",
       icon: Users,
@@ -45,7 +51,7 @@ export default function AdminSubscriptions() {
     },
     {
       title: "Tasa de Conversión",
-      value: "24.8%",
+      value: `${stats.conversionRate.toFixed(1)}%`,
       change: "+3.1%",
       trend: "up",
       icon: TrendingUp,
@@ -53,7 +59,7 @@ export default function AdminSubscriptions() {
     },
     {
       title: "Retención Mensual",
-      value: "89.3%",
+      value: `${stats.monthlyRetention}%`,
       change: "+1.2%",
       trend: "up",
       icon: Calendar,
@@ -61,99 +67,21 @@ export default function AdminSubscriptions() {
     }
   ];
 
-  const subscriptionPlans = [
-    {
-      id: 1,
-      name: "Plan Básico",
-      price: 2.99,
-      currency: "USD",
-      interval: "month",
-      subscribers: 8240,
-      revenue: "$24,595",
-      features: ["720p HD", "1 dispositivo", "Catálogo básico"],
-      active: true,
-      conversion: "18.2%"
-    },
-    {
-      id: 2,
-      name: "Plan Estándar",
-      price: 5.99,
-      interval: "month",
-      currency: "USD",
-      subscribers: 7830,
-      revenue: "$46,905",
-      features: ["1080p Full HD", "2 dispositivos", "Catálogo completo"],
-      active: true,
-      conversion: "42.5%"
-    },
-    {
-      id: 3,
-      name: "Plan Premium",
-      price: 9.99,
-      interval: "month",
-      currency: "USD",
-      subscribers: 2422,
-      revenue: "$24,196",
-      features: ["4K + HDR", "4 dispositivos", "Contenido exclusivo", "Audio espacial"],
-      active: true,
-      conversion: "15.8%"
-    },
-    {
-      id: 4,
-      name: "Plan Anual Básico",
-      price: 29.99,
-      interval: "year",
-      currency: "USD",
-      subscribers: 1240,
-      revenue: "$37,187",
-      features: ["720p HD", "1 dispositivo", "2 meses gratis"],
-      active: true,
-      conversion: "8.3%"
+  const handleRefresh = async () => {
+    try {
+      await refetch();
+      toast({
+        title: "Datos actualizados",
+        description: "Los datos de suscripciones se han actualizado correctamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudieron actualizar los datos.",
+        variant: "destructive",
+      });
     }
-  ];
-
-  const recentSubscriptions = [
-    { 
-      id: 1, 
-      user: "María González", 
-      email: "maria.g@email.com", 
-      plan: "Premium", 
-      amount: "$9.99", 
-      status: "Activa", 
-      date: "2024-01-20",
-      avatar: ""
-    },
-    { 
-      id: 2, 
-      user: "Carlos Rodríguez", 
-      email: "carlos.r@email.com", 
-      plan: "Estándar", 
-      amount: "$5.99", 
-      status: "Activa", 
-      date: "2024-01-20",
-      avatar: ""
-    },
-    { 
-      id: 3, 
-      user: "Ana López", 
-      email: "ana.l@email.com", 
-      plan: "Básico", 
-      amount: "$2.99", 
-      status: "Cancelada", 
-      date: "2024-01-19",
-      avatar: ""
-    },
-    { 
-      id: 4, 
-      user: "Luis Martín", 
-      email: "luis.m@email.com", 
-      plan: "Premium", 
-      amount: "$9.99", 
-      status: "Pausada", 
-      date: "2024-01-19",
-      avatar: ""
-    }
-  ];
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -166,10 +94,36 @@ export default function AdminSubscriptions() {
   };
 
   const getPlanIcon = (planName: string) => {
-    if (planName.includes("Premium")) return Crown;
-    if (planName.includes("Estándar")) return CreditCard;
+    if (planName.toLowerCase().includes("premium")) return Crown;
+    if (planName.toLowerCase().includes("estándar") || planName.toLowerCase().includes("standard")) return CreditCard;
     return Users;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando datos de suscripciones...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
+          <p className="text-red-500 mb-4">Error al cargar los datos: {error}</p>
+          <Button onClick={handleRefresh}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,9 +142,9 @@ export default function AdminSubscriptions() {
             </div>
             
             <div className="flex items-center gap-4">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Nuevo Plan
+              <Button variant="outline" onClick={handleRefresh} disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Actualizar
               </Button>
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-red-500 text-white">AD</AvatarFallback>
@@ -203,7 +157,16 @@ export default function AdminSubscriptions() {
       <div className="container mx-auto px-6 py-8">
         {/* Page Title and Stats */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-6">Gestión de Suscripciones</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-foreground">Gestión de Suscripciones</h1>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline" className="text-xs">
+                Datos en tiempo real
+              </Badge>
+              <span>•</span>
+              <span>Solo usuarios de bienvenida</span>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {subscriptionStats.map((stat, index) => (
               <Card key={index}>
@@ -242,15 +205,14 @@ export default function AdminSubscriptions() {
                   <CardDescription>Gestiona los planes disponibles y sus características</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {subscriptionPlans.map((plan) => {
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {plans.map((plan) => {
                       const PlanIcon = getPlanIcon(plan.name);
                       return (
                         <Card key={plan.id} className="relative">
                           <CardHeader className="pb-4">
                             <div className="flex items-center justify-between">
                               <PlanIcon className="w-6 h-6 text-primary" />
-                              <Switch checked={plan.active} />
                             </div>
                             <CardTitle className="text-lg">{plan.name}</CardTitle>
                             <div className="text-2xl font-bold text-foreground">
@@ -266,11 +228,11 @@ export default function AdminSubscriptions() {
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Ingresos:</span>
-                                <span className="font-medium text-green-600">{plan.revenue}</span>
+                                <span className="font-medium text-green-600">${plan.revenue.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Conversión:</span>
-                                <span className="font-medium">{plan.conversion}</span>
+                                <span className="font-medium">{plan.conversion}%</span>
                               </div>
                             </div>
 
@@ -285,67 +247,17 @@ export default function AdminSubscriptions() {
                                 ))}
                               </ul>
                             </div>
-
-                            <div className="flex gap-2 pt-2">
-                              <Button variant="outline" size="sm" className="flex-1">
-                                <Edit className="w-3 h-3 mr-1" />
-                                Editar
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="w-3 h-3" />
-                              </Button>
-                            </div>
                           </CardContent>
                         </Card>
                       );
                     })}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Plan Creation Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Crear Nuevo Plan</CardTitle>
-                  <CardDescription>Define un nuevo plan de suscripción</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Nombre del Plan</label>
-                      <Input placeholder="Ej: Plan Premium Plus" />
+                  {plans.length === 0 && (
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-4">Cargando planes de suscripción...</p>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Precio</label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 border-border rounded-l-md">
-                          $
-                        </span>
-                        <Input placeholder="9.99" className="rounded-l-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Intervalo</label>
-                      <select className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-                        <option value="month">Mensual</option>
-                        <option value="year">Anual</option>
-                        <option value="week">Semanal</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Características</label>
-                    <textarea 
-                      className="w-full min-h-[80px] rounded-md border border-border bg-background px-3 py-2 text-sm"
-                      placeholder="Ej: 4K Ultra HD, 6 dispositivos simultáneos, contenido exclusivo..."
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-4">
-                    <Button variant="outline">Cancelar</Button>
-                    <Button>Crear Plan</Button>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -359,6 +271,12 @@ export default function AdminSubscriptions() {
                 <CardDescription>Lista de las últimas suscripciones y cambios</CardDescription>
               </CardHeader>
               <CardContent>
+                {recentSubscriptions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No hay suscripciones recientes</p>
+                  </div>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -376,7 +294,7 @@ export default function AdminSubscriptions() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8">
-                              <AvatarImage src={subscription.avatar} />
+                              <AvatarImage src={subscription.avatar || ''} />
                               <AvatarFallback>
                                 {subscription.user.split(' ').map(n => n[0]).join('')}
                               </AvatarFallback>
@@ -391,7 +309,7 @@ export default function AdminSubscriptions() {
                           <Badge variant="outline">{subscription.plan}</Badge>
                         </TableCell>
                         <TableCell className="font-medium text-green-600">
-                          {subscription.amount}
+                          ${subscription.amount.toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(subscription.status)}>
@@ -418,6 +336,7 @@ export default function AdminSubscriptions() {
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -460,16 +379,16 @@ export default function AdminSubscriptions() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">24.8%</div>
+                      <div className="text-3xl font-bold text-blue-600">{stats.conversionRate.toFixed(1)}%</div>
                       <p className="text-sm text-muted-foreground">Tasa de Conversión</p>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">$47.50</div>
+                      <div className="text-3xl font-bold text-green-600">${(stats.monthlyRevenue / Math.max(stats.activeSubscribers, 1)).toFixed(2)}</div>
                       <p className="text-sm text-muted-foreground">Valor Promedio por Usuario</p>
                     </div>
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-purple-600">8.2</div>
-                      <p className="text-sm text-muted-foreground">Meses Promedio de Retención</p>
+                      <div className="text-3xl font-bold text-purple-600">{stats.monthlyRetention.toFixed(1)}</div>
+                      <p className="text-sm text-muted-foreground">Retención Mensual (%)</p>
                     </div>
                   </div>
                 </CardContent>
