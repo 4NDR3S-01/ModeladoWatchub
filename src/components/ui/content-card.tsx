@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { VideoPlayer } from "./video-player";
+import { VideoPlayer } from "@/components/ui/video-player";
 
 interface ContentCardProps {
   id?: string;
