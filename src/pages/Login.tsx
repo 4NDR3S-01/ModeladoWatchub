@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import heroBanner from "@/assets/hero-banner.jpg";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,12 +19,17 @@ export default function Login() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, user } = useAuth();
+  const { role } = useUserRole();
 
   useEffect(() => {
-    if (user) {
-      navigate("/home");
+    if (user && role) {
+      if (role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/home");
+      }
     }
-  }, [user, navigate]);
+  }, [user, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +45,7 @@ export default function Login() {
       return;
     }
 
+
     const { error } = await signIn(email, password);
 
     if (error) {
@@ -47,15 +54,19 @@ export default function Login() {
         description: error.message || "Email o contraseña incorrectos.",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "¡Bienvenido!",
-        description: "Has iniciado sesión correctamente.",
-      });
-      navigate("/home");
+      setIsLoading(false);
+      return;
     }
 
+    toast({
+      title: "¡Bienvenido!",
+      description: "Has iniciado sesión correctamente.",
+    });
+
     setIsLoading(false);
+    
+    // La redirección se manejará automáticamente en el useEffect 
+    // cuando el contexto se actualice con el nuevo usuario
   };
 
   return (
@@ -179,9 +190,17 @@ export default function Login() {
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-400">
               Esta página está protegida por Google reCAPTCHA para asegurar que no eres un robot.{" "}
-              <a href="#" className="text-primary hover:underline">
+              <button
+                type="button"
+                className="text-primary hover:underline p-0 bg-transparent border-none cursor-pointer inline underline"
+                aria-label="Más información sobre Google reCAPTCHA"
+                onClick={() => {
+                  // Aquí puedes abrir un modal o redirigir a una página de información real
+                  window.open("https://www.google.com/recaptcha/about/", "_blank", "noopener,noreferrer");
+                }}
+              >
                 Más información
-              </a>
+              </button>
             </p>
           </div>
         </div>
