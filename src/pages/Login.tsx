@@ -204,15 +204,6 @@ export default function Login() {
             </p>
           </div>
         </div>
-
-        {/* Demo Account Info */}
-        <div className="mt-6 bg-blue-900/20 backdrop-blur-sm rounded-lg p-4 border border-blue-700">
-          <h3 className="text-blue-300 font-semibold mb-2">Cuenta de demostración:</h3>
-          <p className="text-blue-200 text-sm">
-            Email: demo@watchhub.com<br />
-            Contraseña: demo123
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -16,17 +16,37 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useSubscribers } from "@/hooks/useSubscribers";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
-  const { subscribed, subscriptionPlan } = useSubscription();
+  const { subscribed, subscriptionTier } = useSubscription();
+  const { subscriber, getSubscriptionStatus, getDaysRemaining, isActive } = useSubscribers();
   const navigate = useNavigate();
 
   // Helper function to get subscription plan display
   const getSubscriptionPlanDisplay = (plan: string) => {
+    // Priorizar información de la tabla subscribers
+    if (subscriber) {
+      if (subscriber.subscription_tier) {
+        switch (subscriber.subscription_tier.toLowerCase()) {
+          case 'premium':
+            return 'Plan Premium';
+          case 'standard':
+            return 'Plan Estándar';
+          case 'basic':
+            return 'Plan Básico';
+          default:
+            return subscriber.subscription_tier;
+        }
+      }
+      return subscriber.subscribed ? 'Suscrito' : 'Sin suscripción';
+    }
+    
+    // Fallback a la lógica anterior
     switch (plan?.toLowerCase()) {
       case 'premium':
         return 'Plan Premium';
@@ -152,12 +172,41 @@ export function Navbar() {
                         <p className="text-xs leading-none text-muted-foreground">
                           {user.email}
                         </p>
-                        <div className="flex items-center mt-2">
-                          <Crown className="w-3 h-3 text-premium-gold mr-1" />
-                          <span className="text-xs text-premium-gold font-medium">
-                            {getSubscriptionPlanDisplay(profile?.subscription_plan || subscriptionPlan)}
-                          </span>
-                        </div>
+                        {/* Información de suscripción desde la tabla subscribers */}
+                        {subscriber ? (
+                          <div className="flex flex-col mt-2 space-y-1">
+                            <div className="flex items-center">
+                              <Crown className="w-3 h-3 text-premium-gold mr-1" />
+                              <span className="text-xs text-premium-gold font-medium">
+                                {getSubscriptionPlanDisplay(profile?.subscription_plan || subscriptionTier)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Estado: <span className={`font-medium ${
+                                isActive ? 'text-green-500' : 'text-red-500'
+                              }`}>
+                                {getSubscriptionStatus()}
+                              </span>
+                            </div>
+                            {subscriber.subscription_end && getDaysRemaining() !== null && (
+                              <div className="text-xs text-muted-foreground">
+                                {(() => {
+                                  const daysLeft = getDaysRemaining();
+                                  return daysLeft && daysLeft > 0 
+                                    ? `${daysLeft} días restantes`
+                                    : 'Expirado';
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center mt-2">
+                            <Crown className="w-3 h-3 text-premium-gold mr-1" />
+                            <span className="text-xs text-premium-gold font-medium">
+                              {getSubscriptionPlanDisplay(profile?.subscription_plan || subscriptionTier)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
@@ -212,7 +261,11 @@ export function Navbar() {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
+          <button 
+            className="fixed inset-0 bg-black/50 w-full h-full" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Cerrar menú"
+          />
           <div className="fixed top-14 sm:top-16 left-0 right-0 bg-background border-b border-border shadow-lg">
             <div className="container mx-auto px-4 sm:px-6 py-4">
               <nav className="space-y-4">
