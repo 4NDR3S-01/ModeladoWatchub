@@ -10,7 +10,8 @@ test.describe('WatchHub - Funcionalidades Principales', () => {
 
   test('debe cargar la página principal correctamente', async ({ page }) => {
     // Verificar título y estructura básica
-    await expect(page).toHaveTitle(/.*WatchHub.*|.*Vite.*|.*/);
+    // Verificar título y estructura básica
+    await expect(page).toHaveTitle(/WatchHub|Vite/);
     
     // Verificar que existe el contenedor principal
     const root = page.locator('#root');
@@ -39,12 +40,13 @@ test.describe('WatchHub - Funcionalidades Principales', () => {
         if (await loginElement.isVisible({ timeout: 2000 })) {
           await loginElement.click();
           await page.waitForLoadState('networkidle');
-          await expect(page).toHaveURL(/.*login.*/);
+          await expect(page).toHaveURL(/login/);
           loginFound = true;
           break;
         }
       } catch (e) {
         // Continuar con el siguiente selector
+        console.warn(`Error al buscar el selector "${selector}":`, e);
       }
     }
 
@@ -52,7 +54,7 @@ test.describe('WatchHub - Funcionalidades Principales', () => {
     if (!loginFound) {
       await page.goto('/login');
       await page.waitForLoadState('networkidle');
-      await expect(page).toHaveURL(/.*login.*/);
+      await expect(page).toHaveURL(/login/);
     }
   });
 
@@ -74,12 +76,13 @@ test.describe('WatchHub - Funcionalidades Principales', () => {
         if (await registerElement.isVisible({ timeout: 2000 })) {
           await registerElement.click();
           await page.waitForLoadState('networkidle');
-          await expect(page).toHaveURL(/.*register.*/);
+          await expect(page).toHaveURL(/register/);
           registerFound = true;
           break;
         }
       } catch (e) {
         // Continuar con el siguiente selector
+        console.warn(`Error al buscar el selector "${selector}":`, e);
       }
     }
 
@@ -87,7 +90,7 @@ test.describe('WatchHub - Funcionalidades Principales', () => {
     if (!registerFound) {
       await page.goto('/register');
       await page.waitForLoadState('networkidle');
-      await expect(page).toHaveURL(/.*register.*/);
+      await expect(page).toHaveURL(/register/);
     }
   });
 
@@ -96,7 +99,7 @@ test.describe('WatchHub - Funcionalidades Principales', () => {
     await page.waitForLoadState('networkidle');
     
     // Verificar que estamos en la página correcta
-    await expect(page).toHaveURL(/.*subscription.*/);
+    await expect(page).toHaveURL(/subscriptions/);
     
     // Buscar elementos típicos de planes de suscripción
     const planSelectors = [
