@@ -78,6 +78,7 @@ export function ContentCard({
       return;
     }
     
+    console.log(`Playing: ${Title || title}`);
     setShowPlayer(true);
   };
 
@@ -163,10 +164,10 @@ export function ContentCard({
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
               <Button 
                 size="sm" 
-                className="rounded-full bg-white text-black hover:bg-white/90 px-3 sm:px-4 text-xs sm:text-sm"
+                className="rounded-full bg-white text-black hover:bg-white/90 px-3 sm:px-4 text-xs sm:text-sm font-semibold shadow-lg"
                 onClick={handlePlay}
               >
-                <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1 fill-current" />
                 Reproducir
               </Button>
               {user && id && (
@@ -183,7 +184,12 @@ export function ContentCard({
               <Button size="sm" variant="outline" className="rounded-full border-white text-white hover:bg-white hover:text-black p-1.5 sm:p-2">
                 <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
-              <Button size="sm" variant="outline" className="rounded-full border-white text-white hover:bg-white hover:text-black p-1.5 sm:p-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="rounded-full border-white text-white hover:bg-white hover:text-black p-1.5 sm:p-2"
+                onClick={handlePlay}
+              >
                 <Info className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>

@@ -1,7 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Play, Plus } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useNavigate } from "react-router-dom";
+import { VideoPlayer } from "@/components/ui/video-player";
 
 interface TopTenItem {
   id: string;
@@ -18,6 +22,10 @@ interface TopTenRowProps {
 
 export function TopTenRow({ title, items }: TopTenRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { subscribed } = useSubscription();
+  const navigate = useNavigate();
+  const [showPlayer, setShowPlayer] = useState<string | null>(null);
 
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -30,6 +38,29 @@ export function TopTenRow({ title, items }: TopTenRowProps) {
       scrollRef.current.scrollBy({ left: 400, behavior: 'smooth' });
     }
   };
+
+  const handlePlay = (item: TopTenItem) => {
+    if (!subscribed) {
+      navigate("/subscriptions");
+      return;
+    }
+    
+    console.log(`Playing: ${item.title}`);
+    setShowPlayer(item.id);
+  };
+
+  // If showing video player, render it instead of the row
+  if (showPlayer) {
+    const playingItem = items.find(item => item.id === showPlayer);
+    if (playingItem) {
+      return (
+        <VideoPlayer
+          title={playingItem.title}
+          onClose={() => setShowPlayer(null)}
+        />
+      );
+    }
+  }
 
   return (
     <section className="py-8">
@@ -100,13 +131,17 @@ export function TopTenRow({ title, items }: TopTenRowProps) {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex-none px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" className="rounded-full bg-white text-black hover:bg-white/90 p-2">
-                          <Play className="w-3 h-3" />
+                    <div className="flex-none px-2 sm:px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <Button 
+                          size="sm" 
+                          className="rounded-full bg-white text-black hover:bg-white/90 p-1.5 sm:p-2 shadow-lg"
+                          onClick={() => handlePlay(item)}
+                        >
+                          <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
                         </Button>
-                        <Button size="sm" variant="outline" className="rounded-full border-muted-foreground text-muted-foreground hover:bg-muted p-2">
-                          <Plus className="w-3 h-3" />
+                        <Button size="sm" variant="outline" className="rounded-full border-muted-foreground text-muted-foreground hover:bg-muted p-1.5 sm:p-2">
+                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       </div>
                     </div>
