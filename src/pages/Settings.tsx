@@ -3,23 +3,17 @@ import {
   User, 
   Bell, 
   Shield, 
-  Palette,
   Smartphone, 
   Globe, 
   CreditCard,
   HelpCircle,
   ChevronRight,
-  Monitor,
-  Volume2,
-  Wifi,
-  Eye,
-  Languages
+  Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +24,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useDeviceDetection } from "@/hooks/useDeviceDetection";
 import { use2FA } from "@/hooks/use2FA";
 import { useSubscriptions } from "@/hooks/useSubscriptions";
+import { useSubscribers } from "@/hooks/useSubscribers";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { useToast } from "@/hooks/use-toast";
 import { EditProfileDialog } from "@/components/ui/edit-profile-dialog";
@@ -43,6 +38,7 @@ export default function Settings() {
   const { currentDevice, connectedDevices, disconnectDevice } = useDeviceDetection();
   const { twoFactor } = use2FA();
   const { currentSubscription, subscriptionHistory } = useSubscriptions();
+  const { subscriber, getSubscriptionStatus, getDaysRemaining, isActive } = useSubscribers();
   const { paymentMethods } = usePaymentMethods();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -52,9 +48,7 @@ export default function Settings() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoplay, setAutoplay] = useState(true);
   const [subtitles, setSubtitles] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
   const [childrenMode, setChildrenMode] = useState(false);
-  const [dataUsage, setDataUsage] = useState([2]);
 
   const handleUpdateProfile = async (displayName: string) => {
     return await updateProfile({ display_name: displayName });
@@ -261,13 +255,11 @@ export default function Settings() {
                     <p className="text-sm text-muted-foreground mt-1">
                       {profileLoading ? (
                         <Skeleton className="h-4 w-40" />
-                      ) : profile?.created_at ? (
-                        formatDate(profile.created_at)
-                      ) : user?.created_at ? (
-                        formatDate(user.created_at)
-                      ) : (
-                        'No disponible'
-                      )}
+                      ) : (() => {
+                        if (profile?.created_at) return formatDate(profile.created_at);
+                        if (user?.created_at) return formatDate(user.created_at);
+                        return 'No disponible';
+                      })()}
                     </p>
                   </div>
                   <div>
@@ -275,11 +267,10 @@ export default function Settings() {
                     <p className="text-sm text-muted-foreground mt-1">
                       {profileLoading ? (
                         <Skeleton className="h-4 w-40" />
-                      ) : profile?.updated_at ? (
-                        formatDate(profile.updated_at)
-                      ) : (
-                        'No disponible'
-                      )}
+                      ) : (() => {
+                        if (profile?.updated_at) return formatDate(profile.updated_at);
+                        return 'No disponible';
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -695,55 +686,79 @@ export default function Settings() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Suscripción actual */}
-                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {currentSubscription ? getSubscriptionPlanDisplay(currentSubscription.plan) : 'Sin suscripción'}
-                      </h3>
-                      <p className="text-muted-foreground">
-                        {currentSubscription ? `${getSubscriptionPrice(currentSubscription.plan)}/mes` : 'Suscríbete para disfrutar del contenido premium'}
-                      </p>
+                {/* Información de suscripción desde tabla subscribers */}
+                {subscriber && (
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                          <CreditCard className="w-5 h-5" />
+                          Estado de Suscripción
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Información oficial desde la tabla subscribers
+                        </p>
+                      </div>
+                      <Badge variant={isActive() ? 'default' : 'secondary'}>
+                        {getSubscriptionStatus()}
+                      </Badge>
                     </div>
-                    <Badge variant={currentSubscription?.status === 'active' ? 'default' : 'secondary'}>
-                      {currentSubscription?.status === 'active' ? 'Activo' : 
-                       currentSubscription?.status === 'cancelled' ? 'Cancelado' : 'Inactivo'}
-                    </Badge>
-                  </div>
-                  
-                  {currentSubscription && (
+                    
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          {currentSubscription.status === 'cancelled' ? 'Expira' : 'Próximo pago'}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Plan</p>
                         <p className="font-medium">
-                          {currentSubscription.end_date ? formatDate(currentSubscription.end_date) : 'No disponible'}
+                          {subscriber.subscription_tier ? 
+                            getSubscriptionPlanDisplay(subscriber.subscription_tier) : 
+                            'Sin plan específico'
+                          }
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Plan desde</p>
-                        <p className="font-medium">{formatDate(currentSubscription.start_date)}</p>
+                        <p className="text-sm text-muted-foreground">Estado de pago</p>
+                        <p className="font-medium">
+                          {subscriber.subscribed ? 'Suscripción activa' : 'No suscrito'}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Estado</p>
-                        <p className="font-medium capitalize">{currentSubscription.status}</p>
-                      </div>
+                      {subscriber.subscription_end && (
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {(() => {
+                              const days = getDaysRemaining();
+                              return days && days > 0 ? 'Expira' : 'Expiró';
+                            })()}
+                          </p>
+                          <p className="font-medium">
+                            {formatDate(subscriber.subscription_end)}
+                          </p>
+                          {getDaysRemaining() !== null && (
+                            <p className="text-xs text-muted-foreground">
+                              {(() => {
+                                const days = getDaysRemaining();
+                                return days && days > 0 
+                                  ? `${days} días restantes`
+                                  : `Expirado hace ${Math.abs(days || 0)} días`;
+                              })()}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setIsSubscriptionDialogOpen(true)}
-                    >
-                      {currentSubscription ? 'Gestionar suscripción' : 'Ver planes'}
-                    </Button>
-                  </div>
-                </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Email registrado</p>
+                        <p className="font-medium">{subscriber.email}</p>
+                      </div>
+                      {subscriber.stripe_customer_id && (
+                        <div>
+                          <p className="text-muted-foreground">ID Stripe</p>
+                          <p className="font-mono text-xs">{subscriber.stripe_customer_id}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* Métodos de pago */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -822,9 +837,12 @@ export default function Settings() {
                               variant="secondary" 
                               className="text-xs"
                             >
-                              {subscription.action === 'subscribed' ? 'Suscrito' : 
-                               subscription.action === 'cancelled' ? 'Cancelado' : 
-                               subscription.action === 'renewed' ? 'Renovado' : 'Actualizado'}
+                              {(() => {
+                                if (subscription.action === 'subscribed') return 'Suscrito';
+                                if (subscription.action === 'cancelled') return 'Cancelado';
+                                if (subscription.action === 'renewed') return 'Renovado';
+                                return 'Actualizado';
+                              })()}
                             </Badge>
                           </div>
                         </div>
