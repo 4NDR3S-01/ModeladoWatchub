@@ -109,7 +109,7 @@ export function Navbar() {
 
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center space-x-8">
-              <Link to="/" className="text-white hover:text-primary transition-colors">
+              <Link to="/home" className="text-white hover:text-primary transition-colors">
                 Inicio
               </Link>
               <Link to="/categories" className="text-white/70 hover:text-primary transition-colors">
