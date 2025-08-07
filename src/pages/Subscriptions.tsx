@@ -6,6 +6,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { usePayPal } from "@/hooks/usePayPal";
+import PayPalButton from "@/components/PayPalButton";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -14,6 +15,7 @@ const plans = [
     id: "Basic",
     name: "Plan Básico",
     price: "$9.99",
+    priceValue: 9.99,
     description: "Perfecto para empezar",
     features: [
       "Calidad HD (720p)",
@@ -27,6 +29,7 @@ const plans = [
     id: "Standard",
     name: "Plan Estándar",
     price: "$14.99",
+    priceValue: 14.99,
     description: "Ideal para familias",
     features: [
       "Calidad Full HD (1080p)",
@@ -41,6 +44,7 @@ const plans = [
     id: "Premium",
     name: "Plan Premium",
     price: "$19.99",
+    priceValue: 19.99,
     description: "La mejor experiencia",
     features: [
       "Calidad 4K + HDR",
@@ -192,23 +196,43 @@ export default function Subscriptions() {
                     </Button>
                   </div>
                 ) : (
-                  <Button 
-                    className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : 'bg-secondary hover:bg-secondary/90'}`}
-                    size="lg"
-                    onClick={() => handleSubscribe(plan.id)}
-                    disabled={loadingPlan === plan.id || paypalLoading}
-                  >
-                    {(loadingPlan === plan.id || paypalLoading) ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Procesando...
-                      </>
-                    ) : subscribed ? (
-                      "Cambiar a este Plan"
+                  <div className="w-full space-y-3">
+                    {paymentMethod === 'stripe' ? (
+                      <Button 
+                        className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : 'bg-secondary hover:bg-secondary/90'}`}
+                        size="lg"
+                        onClick={() => handleSubscribe(plan.id)}
+                        disabled={loadingPlan === plan.id}
+                      >
+                        {loadingPlan === plan.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Procesando...
+                          </>
+                        ) : subscribed ? (
+                          "Cambiar a este Plan"
+                        ) : (
+                          plan.popular ? 'Comenzar ahora' : 'Elegir plan'
+                        )}
+                      </Button>
                     ) : (
-                      plan.popular ? 'Comenzar ahora' : 'Elegir plan'
+                      <PayPalButton
+                        plan={plan.id}
+                        amount={plan.priceValue}
+                        className="w-full"
+                        disabled={loadingPlan === plan.id}
+                        onSuccess={() => {
+                          toast({
+                            title: "¡Suscripción exitosa!",
+                            description: `Te has suscrito al ${plan.name} con PayPal`,
+                          });
+                        }}
+                        onError={() => {
+                          setLoadingPlan(null);
+                        }}
+                      />
                     )}
-                  </Button>
+                  </div>
                 )}
               </CardFooter>
             </Card>

@@ -16,12 +16,10 @@ major_version = 15
 enabled = false
 port = 54329
 pool_mode = "transaction"
-default_parameter_status = "on"
 
 [realtime]
 enabled = true
-ip_version = "ipv6"
-port = 54324
+ip_version = "IPv4"
 
 [studio]
 enabled = true
@@ -35,12 +33,10 @@ pop3_port = 54326
 
 [storage]
 enabled = true
-port = 54321
 file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-port = 54321
 site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = ["https://127.0.0.1:3000"]
 jwt_expiry = 3600
@@ -52,10 +48,6 @@ enable_manual_linking = false
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
-
-[edge_functions]
-enabled = true
-port = 54321
 
 [analytics]
 enabled = false
